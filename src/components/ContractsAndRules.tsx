@@ -79,8 +79,8 @@ export const ContractsAndRules: React.FC = () => {
         },
         {
           num: "Fase 3",
-          name: "El Oasis Central y Laguna Recreativa",
-          content: "Construcción de la laguna/piscina de arena recreativa de 450 m² provista de sistema de recirculación de agua con filtros ecológicos de arena de cuarzo, iluminación subacuática, terrazas de asoleamiento y un punto de recarga rápido solar para carritos de golf."
+          name: "El Oasis Central y Piscina de Piedra",
+          content: "Construcción de la piscina oasis central de 395 m² revestida de piedra natural, junto con un espejo de agua de 252 m², terrazas (decks) de madera, fogón central y áreas verdes nativas."
         },
         {
           num: "Fase 4",

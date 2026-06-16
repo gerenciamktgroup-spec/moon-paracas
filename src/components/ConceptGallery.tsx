@@ -21,85 +21,85 @@ export const ConceptGallery: React.FC = () => {
   const concepts: Concept[] = [
     {
       id: "portico",
-      title: "Pórtico de Acceso Monumental",
-      tagline: "Estructura Rústica Integrada al Entorno de Paracas",
-      description: "La primera impresión de exclusividad. Diseñado con muros de piedra de cantera natural, vigas macizas de eucalipto seco, cactus candelabro y majestuosos agaves prehistóricos.",
+      title: "Pórtico y Alamedas Rústicas",
+      tagline: "Ingreso Monumental en Piedra de Cantera y Eucalipto",
+      description: "La primera impresión de exclusividad. Diseñado con muros macizos de piedra de cantera natural, vigas gruesas de eucalipto seco, cactus candelabro y majestuosos agaves ornamentales.",
       details: [
-        "Control de accesos con seguridad inalámbrica 24/7.",
+        "Control de accesos automatizado y seguridad 24/7.",
         "Caseta integrada camuflada con piedra del desierto.",
-        "Boleto peatonal y de vehículos eléctricos en vías dobles.",
-        "Arquitectura bioclimática que repele ráfagas de viento costeras."
+        "Alamedas peatonales y de buggies con sombreadores rústicos.",
+        "Arquitectura bioclimática que repele ráfagas de viento y arena."
       ],
       vibe: "Xeripaisajismo y piedra natural",
       gradient: "from-amber-100 to-orange-100",
       icon: <Layers className="h-5 w-5 text-amber-800" />,
-      imageUrl: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80",
+      imageUrl: "/gemini_generated_image_g13l4tg13l4tg13l.jpg",
       hotspots: [
-        { name: "Pórtico de Troncos", x: "25%", y: "40%", desc: "Troncos rústicos de alta durabilidad tratados contra la salinidad costera." },
-        { name: "Muros de Cantera", x: "75%", y: "65%", desc: "Piedra de Paracas apilada de forma artesanal sin mortero visible." },
-        { name: "Xeripaisajismo", x: "45%", y: "80%", desc: "Matorrales xerófitos autóctonos como cactus y agaves que requieren cero riego." }
+        { name: "Vigas de Eucalipto", x: "25%", y: "40%", desc: "Troncos rústicos tratados para alta durabilidad frente al clima desértico." },
+        { name: "Muros de Cantera", x: "75%", y: "65%", desc: "Piedra de la región apilada de forma artesanal respetando tonos áridos." },
+        { name: "Xeripaisajismo", x: "45%", y: "80%", desc: "Matorrales xerófitos autóctonos como cactus y agaves que requieren mínimo riego." }
       ]
     },
     {
       id: "villas-dia",
-      title: "Villas Inteligentes con Estilo Desert Resort",
-      tagline: "Viviendas Bioclimáticas con Confort Premium",
-      description: "Casas unifamiliares integradas sobre parcelas de 250m². Techo plano optimizado con paneles solares monocristalinos y cercos perimetrales de piedra natural.",
+      title: "Villas Rústicas de Lujo",
+      tagline: "Arquitectura Integrada al Paisaje de Dunas",
+      description: "Casas unifamiliares integradas en parcelas amplias. Fachadas en tonos terracota, cercos de pircas de piedra y techos transitables con pérgolas rústicas optimizados para paneles solares.",
       details: [
-        "Soporte de energía solar privada para iluminación led y cargadores.",
-        "Fachadas de color terracota/arena que evitan el sobrecalentamiento térmico.",
-        "Jardines secos privados con bio-digestores para reciclaje hídrico.",
-        "Estacionamientos techados individuales con cargador de buggy."
+        "Preparación para energía solar privada e iluminación ecológica.",
+        "Fachadas de color terracota/arena que se mimetizan con el entorno.",
+        "Jardines secos privados y sistemas de reciclaje de agua.",
+        "Estacionamientos rústicos con cargador para buggies eléctricos."
       ],
-      vibe: "Confort bioclimático en el desierto",
+      vibe: "Elegancia natural en el desierto",
       gradient: "from-amber-50 to-emerald-50",
       icon: <Sun className="h-5 w-5 text-emerald-700" />,
-      imageUrl: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=800&q=80",
+      imageUrl: "/gemini_generated_image_6ba4496ba4496ba4_1.jpg",
       hotspots: [
-        { name: "Techo Solar", x: "50%", y: "25%", desc: "Matriz fotovoltaica de 3.2kW para autoconsumo limpio e iluminación." },
-        { name: "Cerco de Piedra", x: "80%", y: "70%", desc: "Muros bajos divisorios con piedra caliza dorada de la región." },
-        { name: "Buggy Eléctrico", x: "30%", y: "82%", desc: "Buggy todoterreno 100% silencioso provisto para transporte interno." }
+        { name: "Techo Solar", x: "50%", y: "25%", desc: "Puntos de anclaje listos para sistemas fotovoltaicos de autoconsumo." },
+        { name: "Cerco de Pirca", x: "80%", y: "70%", desc: "Muros bajos divisorios con piedra caliza dorada apilada a mano." },
+        { name: "Materiales Nobles", x: "30%", y: "82%", desc: "Revestimientos rústicos de madera tratada y barro texturizado." }
       ]
     },
     {
       id: "oasis",
-      title: "El Oasis Recreativo & Laguna de Arena",
-      tagline: "El Corazón Social y de Esparcimiento Central",
-      description: "Una asombrosa laguna orgánica de agua cristalina rodeada de arena blanca y palmeras exóticas. El espacio perfecto para descansar, ejercitarse y convivir en la frescura del desierto.",
+      title: "Club Oasis y Piscina de Piedra",
+      tagline: "El Corazón Recreativo y Social del Proyecto",
+      description: "Un oasis central con piscina construida con revestimiento de piedra de río y decks de madera natural, rodeado de vegetación nativa y un gran fogón para noches templadas.",
       details: [
-        "Piscina lagoon con playa de arena clara suave al tacto.",
-        "Pérgolas rústicas provistas de tumbonas y zonas de sombra.",
-        "Fogón social central (Fire Pit) para asambleas y fogatas nocturnas.",
-        "Baja densidad de ruido garantizada por reglamento interno."
+        "Piscina oasis de 395m² y espejo de agua de 252m².",
+        "Pérgolas rústicas de eucalipto con zonas de descanso.",
+        "Fogón central (Fire Pit) integrado en piedra para reuniones sociales.",
+        "Sendero Zen y áreas para yoga y meditación al aire libre."
       ],
       vibe: "Relajación absoluta bajo las estrellas",
       gradient: "from-blue-50 to-indigo-50",
       icon: <Moon className="h-5 w-5 text-indigo-700" />,
-      imageUrl: "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?auto=format&fit=crop&w=800&q=80",
+      imageUrl: "/gemini_generated_image_6ba4496ba4496ba4.jpg",
       hotspots: [
-        { name: "Laguna de Arena", x: "40%", y: "55%", desc: "Piscina natural con lecho de arena compacta lavada antideslizante." },
-        { name: "Área de Fogata", x: "70%", y: "75%", desc: "Anillo rústico para fogatas de comunidad bajo el cielo estrellado de Ica." },
-        { name: "Iluminación Sumergible", x: "20%", y: "45%", desc: "Luminarias LED de bajo voltaje y color cian para un resplandor mágico." }
+        { name: "Piscina de Piedra", x: "40%", y: "55%", desc: "Acabados de piedra natural que brindan frescura y mimetismo con el oasis." },
+        { name: "Fogón Central", x: "70%", y: "75%", desc: "Anillo rústico para fogatas comunitarias bajo el cielo limpio de Ica." },
+        { name: "Decks de Madera", x: "20%", y: "45%", desc: "Terrazas de madera natural tratada para tomar sol y descansar." }
       ]
     },
     {
       id: "sol-solar",
-      title: "Reserva de Energía & Movilidad Ecoeficiente",
-      tagline: "Cero Emisiones y Máxima Sostenibilidad",
-      description: "Implementación integral de zonas de carga solar colectiva. Todo el movimiento vehicular interno se restringe a buggies eléctricos o bicicletas de montaña para preservar el silencio.",
+      title: "Xeripaisajismo y Huertos Orgánicos",
+      tagline: "Respeto Absoluto a la Flora Nativa",
+      description: "Diseño paisajístico enfocado en plantas de muy bajo consumo hídrico, combinado con un huerto orgánico común y caminos de tierra compactada para caminatas de desconexión.",
       details: [
-        "Cero contaminación acústica dentro del master plan.",
-        "Estaciones de carga rápida de buggies con sombrillas solares.",
-        "Senderos peatonales de tierra compactada ideales para trotar.",
-        "Áreas de reciclaje de residuos sólidos y compostera condominal."
+        "Áreas comunes forestadas con Huarangos, Palmeras e Icacos.",
+        "Huerto orgánico vecinal para cultivo de hierbas aromáticas y frutales.",
+        "Sendero ecológico perimetral de arcilla compactada para caminatas.",
+        "Reglamento estricto de paisajismo para conservar la armonía visual."
       ],
-      vibe: "Movilidad verde y renovable",
+      vibe: "Sostenibilidad y vida orgánica",
       gradient: "from-amber-100 to-emerald-100",
       icon: <Trees className="h-5 w-5 text-amber-800" />,
-      imageUrl: "https://images.unsplash.com/photo-1592833159155-c62df1b65634?auto=format&fit=crop&w=800&q=80",
+      imageUrl: "/gemini_generated_image_6ba4496ba4496ba4_2.jpg",
       hotspots: [
-        { name: "Sombrillas Solares", x: "65%", y: "30%", desc: "Pérgolas fotovoltaicas de doble propósito: Sombra protectora y captación limpia." },
-        { name: "Buggy Park", x: "35%", y: "72%", desc: "Bahía colectiva para vehículos eléctricos con tomas de carga rápida de 240V." }
+        { name: "Huerto Común", x: "65%", y: "30%", desc: "Zona compartida para prácticas de agricultura urbana orgánica en el desierto." },
+        { name: "Senderos Nativos", x: "35%", y: "72%", desc: "Caminos peatonales sombreados por huarangos y sauces de la zona." }
       ]
     }
   ];

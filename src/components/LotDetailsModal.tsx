@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Lot } from "../types";
+import { Lot } from "../types/map";
 import { Compass, Calendar, ShieldCheck, SunDim, Landmark, RefreshCw, Layers } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from "recharts";
@@ -49,7 +49,8 @@ export const LotDetailsModal: React.FC<LotDetailsProps> = ({ lot, onReserve }) =
   const monthlyPayment = baseMonthly + adminFeeMonthly;
 
   // Simulate solar parameter
-  const peakSolarHours = (5.8 + (lot.number % 3) * 0.4).toFixed(1);
+  const numVal = typeof lot.number === 'number' ? lot.number : (parseInt(lot.number.replace(/\D/g, ""), 10) || 0);
+  const peakSolarHours = (5.8 + (numVal % 3) * 0.4).toFixed(1);
 
   // Generate Recharts Data
   const chartData = Array.from({ length: financingMonths }).map((_, i) => ({
@@ -73,8 +74,8 @@ export const LotDetailsModal: React.FC<LotDetailsProps> = ({ lot, onReserve }) =
           <div>
             <div className="flex items-center gap-2">
               <span className={`inline-block rounded-none px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider border ${
-                lot.status === "disponible" ? "bg-[#A3B18A] text-[#2D3339] border-[#7C8D65]" :
-                lot.status === "oferta" ? "bg-[#E0B084] text-[#2D3339] border-[#BF8D61]" :
+                lot.status === "available" ? "bg-[#A3B18A] text-[#2D3339] border-[#7C8D65]" :
+                lot.status === "offer" ? "bg-[#E0B084] text-[#2D3339] border-[#BF8D61]" :
                 "bg-[#F2ECE4] text-[#2D3339] border-[#D4CCB8]"
               }`}>
                 {lot.status}
@@ -105,8 +106,18 @@ export const LotDetailsModal: React.FC<LotDetailsProps> = ({ lot, onReserve }) =
             <span className="text-xs font-bold text-stone-500 uppercase tracking-widest flex items-center gap-1">
               <Layers className="h-4 w-4 text-[#2D3339]" /> Área Lote
             </span>
-            <p className="font-bold text-[#2D3339] text-base">{lot.area}.00 m²</p>
-            <p className="text-xs text-[#2D3339] opacity-70 mt-1">Frente: 10.00m <br/> Fondo: {(lot.area / 10).toFixed(2)}m</p>
+            <p className="font-bold text-[#2D3339] text-base">{lot.area.toFixed(2)} m²</p>
+            {lot.dimensions ? (
+              <p className="text-[11px] text-stone-500 font-mono mt-2.5 leading-relaxed">
+                Frente: {lot.dimensions.split(" x ")[0]} <br/>
+                Fondo: {lot.dimensions.split(" x ")[1]}
+              </p>
+            ) : (
+              <p className="text-[11px] text-stone-500 font-mono mt-2.5 leading-relaxed">
+                Frente: 10.00m <br/>
+                Fondo: {(lot.area / 10).toFixed(2)}m
+              </p>
+            )}
           </div>
 
           <div className="space-y-1">
@@ -136,7 +147,7 @@ export const LotDetailsModal: React.FC<LotDetailsProps> = ({ lot, onReserve }) =
         </div>
 
         {/* Interactive Financial Simulator */}
-        <div className="border border-stone-200 bg-white rounded-none p-5 space-y-5">
+        <div className="border border-stone-200 bg-white rounded-none p-4 space-y-3.5">
           <div className="flex items-center justify-between border-b pb-3 border-stone-100">
             <h4 className="font-display text-sm font-bold uppercase tracking-wider text-[#2D3339] flex items-center gap-2">
               <Landmark className="h-5 w-5 text-[#C4A484]" /> Simulador de Financiamiento
@@ -149,8 +160,8 @@ export const LotDetailsModal: React.FC<LotDetailsProps> = ({ lot, onReserve }) =
           {/* Input: Downpayment % slider */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-stone-600 font-bold">Cuota Inicial ({downpaymentPercentage}%)</span>
-              <span className="font-bold text-[#2D3339]">S/ {rawDownpayment.toLocaleString()}</span>
+              <span className="text-stone-600 font-bold leading-relaxed">Cuota Inicial ({downpaymentPercentage}%)</span>
+              <span className="font-bold text-[#2D3339]">S/ {rawDownpayment.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
             </div>
             <input
               type="range"
@@ -161,7 +172,7 @@ export const LotDetailsModal: React.FC<LotDetailsProps> = ({ lot, onReserve }) =
               value={downpaymentPercentage}
               onChange={(e) => setDownpaymentPercentage(parseInt(e.target.value))}
             />
-            <div className="flex justify-between text-xs text-stone-500 pt-1">
+            <div className="flex justify-between text-[11px] text-stone-500 pt-1 px-1">
               <span>10% (Mínimo)</span>
               <span>30% (Sugerido)</span>
               <span>100% (Contado)</span>
@@ -198,10 +209,18 @@ export const LotDetailsModal: React.FC<LotDetailsProps> = ({ lot, onReserve }) =
           {downpaymentPercentage < 100 && (
             <div className="h-32 mt-4 cursor-crosshair">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
+                <BarChart data={chartData} margin={{ top: 0, right: 0, left: -25, bottom: 15 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E5E5" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#888' }} />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#888' }} width={80} tickFormatter={(value) => `S/ ${value.toLocaleString()}`} />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 8, fill: '#888' }} 
+                    height={20} 
+                    angle={-30} 
+                    textAnchor="end" 
+                  />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#888' }} width={80} tickMargin={8} tickFormatter={(value) => `S/ ${value.toLocaleString()}`} />
                   <RechartsTooltip 
                     cursor={{fill: 'transparent'}}
                     contentStyle={{ borderRadius: '0px', border: '2px solid #2D3339', fontSize: '10px', fontWeight: 'bold', fontFamily: 'monospace' }}
@@ -215,7 +234,7 @@ export const LotDetailsModal: React.FC<LotDetailsProps> = ({ lot, onReserve }) =
           )}
 
           {/* Financial Projection Output */}
-          <div className="bg-[#F4F4F1] rounded-none p-4 border-2 border-dashed border-[#2D3339]/40 space-y-3 text-sm">
+          <div className="bg-[#F4F4F1] rounded-none p-3 border-2 border-dashed border-[#2D3339]/40 space-y-2 text-xs">
             <div className="flex items-center justify-between text-stone-700">
               <span>Separación hoy:</span>
               <span className="font-bold">S/ {separationFee.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
@@ -240,7 +259,7 @@ export const LotDetailsModal: React.FC<LotDetailsProps> = ({ lot, onReserve }) =
                   <span className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-[#2D3339]" />Gastos admin. (5% Pasarela):</span>
                   <span>S/ {adminFeeMonthly.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
                 </div>
-                <p className="text-xs text-stone-500 italic pb-3 text-center leading-relaxed">
+                <p className="text-[11px] text-stone-600 font-medium italic pb-1.5 text-center leading-relaxed">
                   *El gasto adm. del 5% cubre las comisiones de la pasarela de pagos (tarjetas crédito/débito) para la suscripción de cobro recurrente.
                 </p>
                 <div className="flex items-center justify-between font-bold border-t border-dashed border-[#2D3339]/20 pt-3 text-sm text-[#2D3339]">
@@ -261,7 +280,7 @@ export const LotDetailsModal: React.FC<LotDetailsProps> = ({ lot, onReserve }) =
         </div>
 
         {/* CTA Reservation Button */}
-        {lot.status === "disponible" ? (
+        {lot.status === "available" ? (
           <button
             onClick={() => onReserve(lot.id)}
             className="w-full rounded-none bg-[#C4A484] border-2 border-[#2D3339] py-4 text-sm font-bold text-[#2D3339] hover:bg-white transition-all uppercase tracking-widest flex items-center justify-center gap-2 shadow-[4px_4px_0px_#2D3339] active:translate-y-1 active:shadow-[0px_0px_0px_#2D3339]"
@@ -278,7 +297,7 @@ export const LotDetailsModal: React.FC<LotDetailsProps> = ({ lot, onReserve }) =
         )}
 
         {/* Informative safety note */}
-        <div className="text-xs text-stone-500 text-center leading-relaxed mt-2 italic">
+        <div className="text-[11px] text-stone-600 font-medium text-center leading-relaxed mt-2 italic">
           * Las áreas definitivas están sujetas a la aprobación municipal del plano. Las cuotas son referenciales.
         </div>
       </motion.div>

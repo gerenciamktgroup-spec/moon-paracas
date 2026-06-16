@@ -49,10 +49,10 @@ export const MoonLogo: React.FC<{ className?: string; size?: number; dark?: bool
   );
 };
 
-export const Header: React.FC = () => {
-
-
-  return (
+export const Header: React.FC<{
+  activeTab: "masterplan" | "concept" | "lifestyle" | "engineering" | "signature" | "history" | "architecture";
+  setActiveTab: (tab: "masterplan" | "concept" | "lifestyle" | "engineering" | "signature" | "history" | "architecture") => void;
+}> = ({ activeTab, setActiveTab }) => {  return (
     <header className="border-b-4 border-[#2D3339] bg-[#2D3339] text-white sticky top-0 z-40 px-6 py-4">
       <div className="mx-auto flex max-w-[1400px] flex-col items-center justify-between gap-4 lg:flex-row">
         {/* Brand Sign */}
@@ -65,13 +65,35 @@ export const Header: React.FC = () => {
               MOON <span className="font-light text-[#C4A484]">PARACAS</span>
             </h1>
             <p className="text-xs uppercase font-bold tracking-[0.2em] text-[#C4A484] opacity-90 leading-none">
-              Eco-Condominio de Playa
+              Eco-Condominio Rústico de Lujo
             </p>
           </div>
         </div>
 
-        {/* High-level status metrics - Simplified for cleaner UX */}
-        <div className="flex flex-wrap items-center justify-center gap-4">
+        {/* Horizontal Nav Pills - Scrollable on mobile */}
+        <div className="flex overflow-x-auto hide-scrollbar w-full lg:w-auto items-center gap-2 pb-2 lg:pb-0 pt-2 lg:pt-0 border-t border-stone-700 lg:border-none mt-2 lg:mt-0">
+          {[
+            { id: "masterplan", icon: <TreePine className="w-4 h-4" />, label: "Masterplan" },
+            { id: "history", icon: <CalendarDays className="w-4 h-4" />, label: "Historia" },
+            { id: "architecture", icon: <User className="w-4 h-4" />, label: "Casas" },
+            { id: "lifestyle", icon: <TreePine className="w-4 h-4" />, label: "Estilo Vida" },
+            { id: "engineering", icon: <Receipt className="w-4 h-4" />, label: "Ingeniería" },
+            { id: "concept", icon: <CalendarDays className="w-4 h-4" />, label: "Concepto" },
+            { id: "signature", icon: <LogOut className="w-4 h-4" />, label: "Contratos" }
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id as any)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap text-xs font-bold uppercase tracking-widest transition-all duration-300 border-2 ${
+                activeTab === item.id 
+                  ? "bg-[#C4A484] border-[#C4A484] text-[#2D3339] shadow-md" 
+                  : "bg-transparent border-stone-600 text-stone-400 hover:border-[#C4A484] hover:text-white"
+              }`}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
         </div>
       </div>
     </header>

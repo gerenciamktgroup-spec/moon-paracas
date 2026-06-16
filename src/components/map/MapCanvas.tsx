@@ -3,7 +3,9 @@ import { Lot, MasterplanScene } from "../../types/map";
 import { buildBlockLabels, buildAmenityLabels } from "../../lib/labels";
 import { pathFromPolygon } from "../../lib/geometry";
 import { LotsLayer } from "./layers/LotsLayer";
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { APIProvider, Map as GoogleMap } from "@vis.gl/react-google-maps";
+import { CustomSVGOverlay } from "./CustomSVGOverlay";
+
 
 export function MapCanvas({
   scene,

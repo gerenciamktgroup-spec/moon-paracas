@@ -4,21 +4,25 @@ import { Header } from "./components/Header";
 import MoonParacasMap from "./components/map/MoonParacasMap";
 import { LotDetailsModal } from "./components/LotDetailsModal";
 import { ConceptGallery } from "./components/ConceptGallery";
-import { ContractsAndRules } from "./components/ContractsAndRules";
-import { FinancialTimeline } from "./components/FinancialTimeline";
+import { LifestyleAmenities } from "./components/LifestyleAmenities";
 import { EngineeringSpecs } from "./components/EngineeringSpecs";
-import { ShieldCheck, Trees, Sun, Phone, Mail, Map, Compass, HardHat, MessageSquare, Sparkles } from "lucide-react";
+import { ContractsSignature } from "./components/ContractsSignature";
+import { ParacasHistory } from "./components/ParacasHistory";
+import { ArchitecturalRecommendations } from "./components/ArchitecturalRecommendations";
+import { ShieldCheck, Trees, Phone, Mail, Map, Compass, HardHat, MessageSquare, Sparkles, Lock, BookOpen, Home } from "lucide-react";
 import { auth, db } from "./firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { collection, onSnapshot, doc, writeBatch, updateDoc, getDocs, deleteDoc } from "firebase/firestore";
+import { collection, onSnapshot, doc, writeBatch, updateDoc, getDocs } from "firebase/firestore";
 import { motion, AnimatePresence } from "motion/react";
-import { APIProvider } from "@vis.gl/react-google-maps";
 
-const API_KEY =
-  (typeof process !== 'undefined' && process.env && process.env.GOOGLE_MAPS_PLATFORM_KEY) ||
-  (import.meta as any).env?.VITE_GOOGLE_MAPS_PLATFORM_KEY ||
-  (globalThis as any).GOOGLE_MAPS_PLATFORM_KEY ||
-  '';
+// Model imports
+import { buildTerrainScene, getMeterToSvgScale } from "./lib/terrainModel";
+import { buildBlocks } from "./lib/blockModel";
+import { buildLots, buildParkingLots } from "./lib/lotModel";
+import { buildAmenities } from "./lib/amenityModel";
+import { buildRoads } from "./lib/roadModel";
+import { roadToPolygon } from "./lib/geometry";
+import { checkCollision } from "./lib/spatialAnalyzer";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -28,7 +32,7 @@ export default function App() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   
   // Navigation tabs state
-  const [activeTab, setActiveTab] = useState<"masterplan" | "concept" | "caja-positiva" | "engineering">("masterplan");
+  const [activeTab, setActiveTab] = useState<"masterplan" | "concept" | "lifestyle" | "engineering" | "signature" | "history" | "architecture">("masterplan");
 
   // Contact form state
   const [contactName, setContactName] = useState("");
@@ -53,51 +57,70 @@ export default function App() {
     const lotsCol = collection(db, "lots");
 
     // ── PASO 1: Carga INMEDIATA desde el generador local ──────────────────
-    import("./lib/terrainModel").then(({ buildTerrainScene }) => {
-      import("./lib/blockModel").then(({ buildBlocks }) => {
-        import("./lib/lotModel").then(({ buildLots }) => {
-          const terrainScene = buildTerrainScene();
-          const blocks = buildBlocks(terrainScene.innerBuffer);
-          const localLots = buildLots(blocks);
-          
-          setLots(localLots);
-          setSelectedLot(localLots[0]);
+    const terrainScene = buildTerrainScene();
+    const scale = getMeterToSvgScale();
+    const blocks = buildBlocks(terrainScene.innerBuffer);
+    const roads = buildRoads(terrainScene.innerBuffer);
+    const amenities = buildAmenities(terrainScene.innerBuffer);
+    
+    // Convert roads to polygons for collision detection
+    const roadPolys = roads.map(r => roadToPolygon(r.path, r.widthM, scale));
+    
+    const obstacles = [
+      ...blocks.map((b: any) => b.polygon),
+      ...amenities.map((a: any) => a.polygon),
+      ...roadPolys
+    ];
+    
+    // Build parking lots, avoiding blocks, amenities, and roads
+    const parkings = buildParkingLots(terrainScene.innerBuffer, obstacles);
+    const localLots = buildLots(blocks, parkings);
+    
+    // Filter out lots that overlap with buildings (exclude sand-plaza/Oasis)
+    const activeBuildings = amenities
+      .filter((a: any) => a.id !== "A_SAND" && a.kind !== "sand-plaza")
+      .map((a: any) => a.polygon);
+    const cleanLocalLots = localLots.filter(l => !checkCollision(l.polygon, activeBuildings, 0.1));
+    
+    const allLots = [...cleanLocalLots, ...parkings];
+    
+    setLots(allLots);
+    setSelectedLot(allLots[0]);
 
-          // Firebase sync bg
-          getDocs(lotsCol).then(async (snap) => {
-            try {
-              const hasSeeded = localStorage.getItem("seeded-moon-v2");
+    // Firebase sync bg
+    getDocs(lotsCol).then(async (snap) => {
+      try {
+        const hasSeeded = localStorage.getItem("seeded-moon-v30");
 
-              if (!hasSeeded || snap.empty || snap.docs.length < 100) {
-                console.log("Re-seeding Firebase with Moon Paracas terrain lots...");
-                const deleteBatch = writeBatch(db);
-                snap.docs.forEach(d => deleteBatch.delete(d.ref));
-                await deleteBatch.commit();
+        if (!hasSeeded || snap.empty || snap.docs.length < 100) {
+          console.log("Re-seeding Firebase with Moon Paracas terrain lots...");
+          const deleteBatch = writeBatch(db);
+          snap.docs.forEach(d => deleteBatch.delete(d.ref));
+          await deleteBatch.commit();
 
-                const batch1 = writeBatch(db);
-                const batch2 = writeBatch(db);
-                localLots.forEach((lot, i) => {
-                  const ref = doc(db, "lots", lot.id);
-                  if (i < 200) batch1.set(ref, lot);
-                  else batch2.set(ref, lot);
-                });
-                await batch1.commit();
-                await batch2.commit();
-                localStorage.setItem("seeded-moon-v2", "true");
-                console.log("✅ Firebase seeded with", localLots.length, "lots.");
-              } else {
-                const dbLots = snap.docs.map(d => d.data() as Lot);
-                if (isMounted && dbLots.length > 0) {
-                  setLots(dbLots);
-                  setSelectedLot(dbLots[0]);
-                }
-              }
-            } catch (err) {}
-          }).catch(() => {});
-        });
-      });
-    });
-    // Fallback sync logic inside the async chain above.
+          const batch1 = writeBatch(db);
+          const batch2 = writeBatch(db);
+          allLots.forEach((lot, i) => {
+            const ref = doc(db, "lots", lot.id);
+            if (i < 250) batch1.set(ref, lot);
+            else batch2.set(ref, lot);
+          });
+          await batch1.commit();
+          await batch2.commit();
+          localStorage.setItem("seeded-moon-v30", "true");
+          console.log("✅ Firebase seeded with", allLots.length, "lots.");
+        } else {
+          const dbLots = snap.docs.map(d => d.data() as Lot);
+          if (isMounted && dbLots.length > 0) {
+            setLots(dbLots);
+            setSelectedLot(prev => {
+              const updated = dbLots.find(l => l.id === prev?.id);
+              return updated ?? dbLots[0];
+            });
+          }
+        }
+      } catch (err) {}
+    }).catch(() => {});
 
     // ── PASO 3: Escuchar cambios en tiempo real (reservas, estados) ───────
     const unsubscribe = onSnapshot(lotsCol, (snapshot) => {
@@ -112,7 +135,6 @@ export default function App() {
       }
     }, (error) => {
       console.warn("Firestore listener error:", error.message);
-      // No mostramos toast — ya tenemos datos locales funcionando
     });
 
     return () => {
@@ -126,7 +148,7 @@ export default function App() {
     try {
       const lotRef = doc(db, "lots", lotId);
       await updateDoc(lotRef, {
-        status: "oferta"
+        status: "offer"
       });
       setToastMessage(`¡Éxito! El lote ${lotId.split("-")[1]} ha sido pre-reservado con S/ 1,000 en garantía.`);
       setTimeout(() => {
@@ -140,35 +162,14 @@ export default function App() {
   };
 
   // Helper metrics for overall dashboard counters
-  const disponCount = lots.filter((l) => l.status === "disponible").length;
-
-  const hasValidKey = Boolean(API_KEY) && API_KEY !== 'YOUR_API_KEY';
-
-  if (!hasValidKey) {
-    return (
-      <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',fontFamily:'sans-serif'}}>
-        <div style={{textAlign:'center',maxWidth:520}}>
-          <h2>Google Maps API Key Required</h2>
-          <p><strong>Step 1:</strong> <a href="https://console.cloud.google.com/google/maps-apis/start?utm_campaign=gmp-code-assist-ais" target="_blank" rel="noopener">Get an API Key</a></p>
-          <p><strong>Step 2:</strong> Add your key as a secret in AI Studio:</p>
-          <ul style={{textAlign:'left',lineHeight:'1.8'}}>
-            <li>Open <strong>Settings</strong> (⚙️ gear icon, <strong>top-right corner</strong>)</li>
-            <li>Select <strong>Secrets</strong></li>
-            <li>Type <code>GOOGLE_MAPS_PLATFORM_KEY</code> as the secret name, press <strong>Enter</strong></li>
-            <li>Paste your API key as the value, press <strong>Enter</strong></li>
-          </ul>
-          <p>The app rebuilds automatically after you add the secret.</p>
-        </div>
-      </div>
-    );
-  }
+  const disponCount = lots.filter((l) => l.status === "available").length;
 
   return (
-    <APIProvider apiKey={API_KEY} version="weekly">
-      <div className="min-h-screen bg-[#F4F4F1] font-sans selection:bg-[#C4A484] selection:text-[#2D3339] pb-16">
+    <>
+      <div className="min-h-[100dvh] bg-[#F4F4F1] font-sans selection:bg-[#C4A484] selection:text-[#2D3339] pb-16">
         
         {/* Premium Header */}
-        <Header />
+        <Header activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {/* Main Container Wrapper */}
       <main className="mx-auto max-w-7xl px-4 sm:px-6 py-6 space-y-8">
@@ -181,46 +182,46 @@ export default function App() {
           </div>
         )}
 
-        {/* Hero Banner / Commercial Landing Title */}
-        <div className="relative rounded-none border-4 border-stone-800 bg-stone-900 overflow-hidden min-h-[500px] flex items-center shadow-lg group">
-          {/* Background image overlay - Elevated desert meeting the ocean */}
+        {/* Modern Luxury Hero Banner */}
+        <div className="relative rounded-3xl overflow-hidden min-h-[500px] sm:min-h-[600px] flex items-end shadow-2xl group mb-8 border border-stone-200/50">
+          {/* Background image - fully visible */}
           <div 
-            className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat transition-transform duration-1000 group-hover:scale-105 opacity-80"
+            className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat transition-transform duration-1000 group-hover:scale-105"
             style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1682687982501-1e58f813f222?q=80&w=2600&auto=format&fit=crop")' }}
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-stone-900/95 via-stone-900/80 to-transparent z-0" />
+          {/* Elegant gradient overlay - dark at bottom for text readability, fully transparent at top */}
+          <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-900/60 to-transparent z-0" />
           
           <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
-            className="relative z-10 max-w-4xl p-8 sm:p-12 space-y-6"
+            className="relative z-10 w-full p-6 sm:p-12 lg:p-16 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8"
           >
-            <div className="inline-flex items-center gap-2 rounded-none bg-[#A3B18A] border border-[#2D3339] px-4 py-2 text-xs font-bold text-[#2D3339] shadow-[2px_2px_0px_#2D3339] uppercase tracking-widest">
-              <Sparkles className="h-4 w-4" /> Etapa Fundadora
+            {/* Title Section */}
+            <div className="max-w-3xl space-y-4">
+              <div className="inline-flex items-center gap-2 rounded-full bg-[#C4A484]/20 backdrop-blur-md border border-[#C4A484]/50 px-4 py-1.5 text-xs font-bold text-[#F4F4F1] uppercase tracking-widest shadow-lg">
+                <Sparkles className="h-4 w-4" /> Etapa Fundadora
+              </div>
+              
+              <h2 className="font-display text-5xl sm:text-6xl lg:text-7xl font-bold text-white tracking-tighter leading-[1.05] uppercase drop-shadow-md">
+                Moon Paracas. <br />
+                <span className="text-[#C4A484] font-light">Refugio en el oasis.</span>
+              </h2>
             </div>
-            
-            <h2 className="font-display text-4xl sm:text-5xl lg:text-7xl font-bold text-stone-100 tracking-tighter leading-[1.05] uppercase drop-shadow-lg">
-              Moon Paracas. <br className="hidden sm:block" />
-              <span className="text-[#A3B18A] font-light tracking-tight">Tu refugio privado en lo alto del oasis.</span>
-            </h2>
-            
-            <p className="text-sm md:text-lg text-stone-300 leading-relaxed max-w-2xl border-l-4 border-[#E15A42] pl-5 opacity-95">
-              Un eco-condominio diseñado para la desconexión total sobre el tablazo de Paracas. <strong>Arquitectura sostenible, cero contaminación vehicular interna, y seguridad antisísmica comprobada.</strong> Descubre nuestro modelo de Caja Positiva.
-            </p>
-            
-            <div className="pt-4 flex flex-col sm:flex-row gap-4">
+
+            {/* Glassmorphism Info Card */}
+            <div className="max-w-md bg-stone-900/30 backdrop-blur-md border border-white/10 p-6 sm:p-8 rounded-2xl shadow-2xl">
+              <p className="text-sm sm:text-base text-stone-200 leading-relaxed mb-6 font-light">
+                Un eco-condominio diseñado para la desconexión total sobre el tablazo de Paracas. <strong className="text-white font-medium">Arquitectura sostenible de adobe y terracota, cero contaminación vehicular, y seguridad absoluta.</strong>
+              </p>
+              
               <button 
                 onClick={() => setActiveTab("masterplan")}
-                className="inline-flex items-center justify-center gap-2 bg-[#E15A42] hover:bg-[#c94d36] text-white border-2 border-transparent font-bold text-sm px-6 py-4 rounded-none uppercase tracking-widest shadow-[4px_4px_0px_#2D3339] active:translate-y-1 active:shadow-[0px_0px_0px_#2D3339] transition-all"
+                className="group flex items-center justify-between w-full bg-white hover:bg-[#C4A484] text-stone-900 px-6 py-3.5 rounded-full font-bold text-xs sm:text-sm uppercase tracking-widest transition-all duration-300 shadow-md"
               >
-                <Map className="h-5 w-5" /> Explorar Masterplan
-              </button>
-              <button 
-                onClick={() => setActiveTab("caja-positiva")}
-                className="inline-flex items-center justify-center gap-2 bg-stone-800/50 backdrop-blur-sm hover:bg-stone-800 text-[#EBEBE5] border-2 border-[#EBEBE5]/20 hover:border-[#EBEBE5] font-bold text-sm px-6 py-4 rounded-none uppercase tracking-widest transition-all"
-              >
-                <HardHat className="h-5 w-5" /> Ver Modelo Caja Positiva
+                <span>Descubrir Masterplan</span>
+                <Map className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </button>
             </div>
           </motion.div>
@@ -248,52 +249,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Tab Navigation (To reduce vertical saturation) */}
-        <div className="flex overflow-x-auto hide-scrollbar gap-2 border-b border-[#2D3339]/20 pb-0 mt-4 mb-8">
-          <button
-            onClick={() => setActiveTab("masterplan")}
-            className={`px-5 py-4 font-bold text-sm tracking-widest uppercase whitespace-nowrap transition-colors flex items-center gap-2 border-b-4 ${
-              activeTab === "masterplan" 
-                ? "text-[#2D3339] border-[#2D3339]" 
-                : "text-stone-400 hover:text-stone-600 border-transparent"
-            }`}
-          >
-            <Map className="h-4 w-4" /> Masterplan & Inventario
-          </button>
-          
-          <button
-            onClick={() => setActiveTab("caja-positiva")}
-            className={`px-5 py-4 font-bold text-sm tracking-widest uppercase whitespace-nowrap transition-colors flex items-center gap-2 border-b-4 ${
-              activeTab === "caja-positiva" 
-                ? "text-[#2D3339] border-[#2D3339]" 
-                : "text-stone-400 hover:text-stone-600 border-transparent"
-            }`}
-          >
-            <HardHat className="h-4 w-4" /> Modelo Caja Positiva
-          </button>
 
-          <button
-            onClick={() => setActiveTab("engineering")}
-            className={`px-5 py-4 font-bold text-sm tracking-widest uppercase whitespace-nowrap transition-colors flex items-center gap-2 border-b-4 ${
-              activeTab === "engineering" 
-                ? "text-[#2D3339] border-[#2D3339]" 
-                : "text-stone-400 hover:text-stone-600 border-transparent"
-            }`}
-          >
-            <ShieldCheck className="h-4 w-4" /> Seguridad e Ingeniería
-          </button>
-          
-          <button
-            onClick={() => setActiveTab("concept")}
-            className={`px-5 py-4 font-bold text-sm tracking-widest uppercase whitespace-nowrap transition-colors flex items-center gap-2 border-b-4 ${
-              activeTab === "concept" 
-                ? "text-[#2D3339] border-[#2D3339]" 
-                : "text-stone-400 hover:text-stone-600 border-transparent"
-            }`}
-          >
-            <Sparkles className="h-4 w-4" /> Galería de Concepto
-          </button>
-        </div>
 
         {/* Dynamic Content based on tabs */}
         <AnimatePresence mode="wait">
@@ -307,7 +263,11 @@ export default function App() {
               className="flex flex-col gap-12"
             >
               <div className="w-full">
-                <MoonParacasMap />
+                <MoonParacasMap
+                  lots={lots}
+                  selectedLot={selectedLot}
+                  onSelectLot={setSelectedLot}
+                />
               </div>
 
               {/* Interactive Lot Details & Payment Simulator (Centered below) */}
@@ -337,15 +297,15 @@ export default function App() {
             </motion.div>
           )}
 
-          {activeTab === "caja-positiva" && (
+          {activeTab === "lifestyle" && (
             <motion.div
-              key="caja-positiva-tab"
+              key="lifestyle-tab"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
               transition={{ duration: 0.3 }}
             >
-              <FinancialTimeline />
+              <LifestyleAmenities />
             </motion.div>
           )}
 
@@ -360,13 +320,55 @@ export default function App() {
               <EngineeringSpecs />
             </motion.div>
           )}
+
+          {activeTab === "signature" && (
+            <motion.div
+              key="signature-tab"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.3 }}
+            >
+              <ContractsSignature 
+                selectedLot={selectedLot}
+                onSignatureSuccess={(msg) => {
+                  setToastMessage(msg);
+                  setTimeout(() => setToastMessage(null), 5500);
+                }}
+              />
+            </motion.div>
+          )}
+
+          {activeTab === "history" && (
+            <motion.div
+              key="history-tab"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.3 }}
+            >
+              <ParacasHistory />
+            </motion.div>
+          )}
+
+          {activeTab === "architecture" && (
+            <motion.div
+              key="architecture-tab"
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -15 }}
+              transition={{ duration: 0.3 }}
+            >
+              <ArchitecturalRecommendations />
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* CONTACT US FORM (Inspired directly by the reference website layout) */}
         <div id="contact-form" className="rounded-none border-4 border-[#2D3339] bg-white p-6 sm:p-8 shadow-lg space-y-6">
           <div className="text-center max-w-2xl mx-auto space-y-3">
             <h2 className="font-sans text-sm font-black tracking-widest text-[#8C905C] uppercase">
-              COTIZA TU LOTE DE CAMPO Y PLAYA
+              COTIZA TU LOTE DE CAMPO RÚSTICO DE LUJO
             </h2>
             <h3 className="font-display text-3xl sm:text-4xl font-black text-[#2D3339] tracking-tight uppercase">
               CONTÁCTANOS
@@ -464,7 +466,7 @@ export default function App() {
                     className="w-full rounded-none border-2 border-[#2D3339] px-3.5 py-2 bg-[#F4F4F1] font-bold text-[#8C905C]"
                     value={
                       selectedLot 
-                        ? `Lote ${selectedLot.number} - ${selectedLot.quadrant} (${selectedLot.area} m² - S/ ${selectedLot.price.toLocaleString()})`
+                        ? `Lote ${selectedLot.number} - ${selectedLot.quadrant} (${selectedLot.area.toFixed(2)} m² - S/ ${selectedLot.price.toLocaleString('es-PE', {maximumFractionDigits: 0})})`
                         : "Ningún lote seleccionado en el plano"
                     }
                   />
@@ -548,6 +550,6 @@ export default function App() {
         </div>
       </footer>
     </div>
-    </APIProvider>
+    </>
   );
 }

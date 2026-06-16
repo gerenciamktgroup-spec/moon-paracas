@@ -1,69 +1,65 @@
 import { Road, XY } from "../types/map";
-import { centroid, lerp } from "./geometry";
+import { getBandPoint, getMaxTForD } from "./blockModel";
+import { getMeterToSvgScale } from "./terrainModel";
+import { centroid } from "./geometry";
 
 export function buildRoads(innerBuffer: XY[]): Road[] {
+  if (innerBuffer.length < 4) return [];
+
+  const scale = getMeterToSvgScale();
   const c = centroid(innerBuffer);
 
-  const south = innerBuffer.reduce((acc, p) => (p.y > acc.y ? p : acc), innerBuffer[0]);
-  const north = innerBuffer.reduce((acc, p) => (p.y < acc.y ? p : acc), innerBuffer[0]);
+  const entryBoulevardStart = getBandPoint(innerBuffer, 0.00, 115.5, scale);
+  const entryBoulevardEnd = getBandPoint(innerBuffer, 0.065, 115.5, scale);
 
-  const primary: Road = {
-    id: "R1",
-    kind: "primary",
-    widthM: 8,
-    path: [
-      south,
-      lerp(south, c, 0.25),
-      { x: c.x - 10, y: c.y + 80 },
-      { x: c.x + 5, y: c.y + 20 },
-      { x: c.x + 10, y: c.y - 60 },
-      lerp(c, north, 0.85)
-    ]
-  };
-
-  const secondaryA: Road = {
-    id: "R2",
-    kind: "secondary",
-    widthM: 6,
-    path: [
-      { x: c.x - 260, y: c.y + 140 },
-      { x: c.x - 140, y: c.y + 90 },
-      { x: c.x - 40, y: c.y + 55 }
-    ]
-  };
-
-  const secondaryB: Road = {
-    id: "R3",
-    kind: "secondary",
-    widthM: 6,
-    path: [
-      { x: c.x + 260, y: c.y + 130 },
-      { x: c.x + 140, y: c.y + 85 },
-      { x: c.x + 50, y: c.y + 45 }
-    ]
-  };
-
-  const secondaryC: Road = {
-    id: "R4",
-    kind: "secondary",
-    widthM: 6,
-    path: [
-      { x: c.x - 270, y: c.y - 20 },
-      { x: c.x - 130, y: c.y - 25 },
-      { x: c.x - 30, y: c.y - 5 }
-    ]
-  };
-
-  const secondaryD: Road = {
-    id: "R5",
-    kind: "secondary",
-    widthM: 6,
-    path: [
-      { x: c.x + 270, y: c.y - 20 },
-      { x: c.x + 130, y: c.y - 25 },
-      { x: c.x + 30, y: c.y - 5 }
-    ]
-  };
-
-  return [primary, secondaryA, secondaryB, secondaryC, secondaryD];
+  return [
+    // Central Entrance Boulevard (8m)
+    {
+      id: "MAIN_ACCESS_ROAD",
+      kind: "primary" as const,
+      widthM: 8,
+      path: [entryBoulevardStart, entryBoulevardEnd]
+    },
+    // Removed redundant CROSS_ROAD_ENTRANCE which was drawn under the parking lot
+    // Rear Perimeter Cross Road (Flush against the back wall)
+    {
+      id: "CROSS_ROAD_BACK",
+      kind: "secondary" as const,
+      widthM: 6,
+      path: [
+        getBandPoint(innerBuffer, 0.99, 0, scale),
+        getBandPoint(innerBuffer, 0.99, 231, scale)
+      ]
+    },
+    // Cross Street 1
+    {
+      id: "CROSS_ROAD_0",
+      kind: "secondary" as const,
+      widthM: 5,
+      path: [
+        getBandPoint(innerBuffer, 0.33, 0, scale),
+        getBandPoint(innerBuffer, 0.33, 231, scale)
+      ]
+    },
+    // Cross Street 2
+    {
+      id: "CROSS_ROAD_1",
+      kind: "secondary" as const,
+      widthM: 5,
+      path: [
+        getBandPoint(innerBuffer, 0.65, 0, scale),
+        getBandPoint(innerBuffer, 0.65, 231, scale)
+      ]
+    },
+    // Vertical roads connecting the front flush road to the back flush road
+    ...[23, 49, 75, 156, 182, 208].map((D_k, i) => ({
+      id: `LINEAR_ROAD_${i}`,
+      kind: "secondary" as const,
+      widthM: 6,
+      path: [
+        getBandPoint(innerBuffer, getMaxTForD(D_k) + 0.015, D_k, scale),
+        getBandPoint(innerBuffer, 0.99, D_k, scale)
+      ]
+    }))
+  ];
 }

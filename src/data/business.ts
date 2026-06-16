@@ -1,27 +1,55 @@
 import { BlockSpec } from "../types/map";
 
 export const BUSINESS_RULES = {
-  perimeterBufferM: 4,
+  perimeterBufferM: 6,
   primaryRoadWidthM: 8,
   secondaryRoadWidthM: 6,
   pedestrianRoadWidthM: 4,
-  totalLots: 234,
-  averageLotApproxM2: 250,
+  totalLots: 248,
+  averageLotApproxM2: 230,
   legalDisclaimer:
     "Área de uso exclusivo aproximada dentro de un proyecto privado de desarrollo progresivo."
 };
 
+export const CONDITIONAL_METADATA = {
+  mainAccessSide: "Acceso principal rústico (Provisional - Pendiente de validación final)",
+  runoffDirection: "Sentido de escorrentía pluvial preliminar (Sujeto a ingeniería hidráulica)",
+  utilitySide: "Puntos de conexión eléctrica/agua provisionales (Sujeto a factibilidad)",
+  internalCorridorsValidation: "El diseño de corredores de 6m de ancho requiere conformidad definitiva de Defensa Civil y Municipalidad de Paracas"
+};
+
 export const BLOCK_SPECS: BlockSpec[] = [
-  { id: "M1", role: "access-west", targetLotCount: 14, targetNetAreaM2: 3500, lotMix: { standard: 10, premium: 2, adjustment: 2 } },
-  { id: "M2", role: "access-east", targetLotCount: 14, targetNetAreaM2: 3500, lotMix: { standard: 10, premium: 2, adjustment: 2 } },
-  { id: "M3", role: "south-west", targetLotCount: 16, targetNetAreaM2: 4000, lotMix: { standard: 12, premium: 2, adjustment: 2 } },
-  { id: "M4", role: "south-east", targetLotCount: 16, targetNetAreaM2: 4000, lotMix: { standard: 12, premium: 2, adjustment: 2 } },
-  { id: "M5", role: "central-west", targetLotCount: 18, targetNetAreaM2: 4500, lotMix: { standard: 14, premium: 3, adjustment: 1 } },
-  { id: "M6", role: "central-east", targetLotCount: 18, targetNetAreaM2: 4500, lotMix: { standard: 14, premium: 3, adjustment: 1 } },
-  { id: "M7", role: "oasis-west", targetLotCount: 22, targetNetAreaM2: 5500, lotMix: { standard: 16, premium: 5, adjustment: 1 } },
-  { id: "M8", role: "oasis-east", targetLotCount: 22, targetNetAreaM2: 5500, lotMix: { standard: 16, premium: 5, adjustment: 1 } },
-  { id: "M9", role: "north-west", targetLotCount: 22, targetNetAreaM2: 5450, lotMix: { standard: 18, premium: 2, adjustment: 2 } },
-  { id: "M10", role: "north-east", targetLotCount: 22, targetNetAreaM2: 5450, lotMix: { standard: 18, premium: 2, adjustment: 2 } },
-  { id: "M11", role: "north-remate-west", targetLotCount: 25, targetNetAreaM2: 6250, lotMix: { standard: 19, premium: 5, adjustment: 1 } },
-  { id: "M12", role: "north-remate-east", targetLotCount: 25, targetNetAreaM2: 6250, lotMix: { standard: 19, premium: 5, adjustment: 1 } }
+  // M1-M4: Banda 1-2
+  { id: "M1", role: "inner-oasis", targetLotCount: 5, targetNetAreaM2: 1200, lotMix: { standard: 5, premium: 0, adjustment: 0 } },
+  { id: "M2", role: "inner-oasis", targetLotCount: 7, targetNetAreaM2: 2300, lotMix: { standard: 0, premium: 0, adjustment: 0, zen: 7 } },
+  { id: "M3", role: "inner-oasis", targetLotCount: 10, targetNetAreaM2: 2300, lotMix: { standard: 8, premium: 2, adjustment: 0 } },
+  { id: "M4", role: "inner-oasis", targetLotCount: 10, targetNetAreaM2: 1800, lotMix: { standard: 0, premium: 0, adjustment: 0, "tiny-house": 10 } },
+  
+  // M5-M10: Banda 2-4
+  { id: "M5", role: "middle-ring", targetLotCount: 16, targetNetAreaM2: 3000, lotMix: { standard: 0, premium: 0, adjustment: 0, "tiny-house": 16 } },
+  { id: "M6", role: "middle-ring", targetLotCount: 18, targetNetAreaM2: 3300, lotMix: { standard: 0, premium: 0, adjustment: 0, "tiny-house": 18 } },
+  { id: "M7", role: "middle-ring", targetLotCount: 8, targetNetAreaM2: 1900, lotMix: { standard: 8, premium: 0, adjustment: 0 } },
+  { id: "M8", role: "middle-ring", targetLotCount: 8, targetNetAreaM2: 2530, lotMix: { standard: 0, premium: 0, adjustment: 0, zen: 8 } },
+  { id: "M9", role: "middle-ring", targetLotCount: 10, targetNetAreaM2: 2300, lotMix: { standard: 8, premium: 2, adjustment: 0 } },
+  { id: "M10", role: "middle-ring", targetLotCount: 9, targetNetAreaM2: 2205, lotMix: { standard: 0, premium: 9, adjustment: 0 } },
+  
+  // M11-M12: Banda 4
+  { id: "M11", role: "middle-ring", targetLotCount: 8, targetNetAreaM2: 1960, lotMix: { standard: 0, premium: 8, adjustment: 0 } },
+  { id: "M12", role: "middle-ring", targetLotCount: 9, targetNetAreaM2: 2205, lotMix: { standard: 0, premium: 9, adjustment: 0 } },
+  
+  // M13-M19: Banda 5-7
+  { id: "M13", role: "outer-ring", targetLotCount: 9, targetNetAreaM2: 2205, lotMix: { standard: 0, premium: 9, adjustment: 0 } },
+  { id: "M14", role: "outer-ring", targetLotCount: 8, targetNetAreaM2: 1960, lotMix: { standard: 0, premium: 8, adjustment: 0 } },
+  { id: "M15", role: "outer-ring", targetLotCount: 9, targetNetAreaM2: 2205, lotMix: { standard: 0, premium: 9, adjustment: 0 } },
+  { id: "M16", role: "outer-ring", targetLotCount: 8, targetNetAreaM2: 1900, lotMix: { standard: 8, premium: 0, adjustment: 0 } },
+  { id: "M17", role: "outer-ring", targetLotCount: 8, targetNetAreaM2: 2530, lotMix: { standard: 0, premium: 0, adjustment: 0, zen: 8 } },
+  { id: "M18", role: "outer-ring", targetLotCount: 10, targetNetAreaM2: 2300, lotMix: { standard: 8, premium: 2, adjustment: 0 } },
+  { id: "M19", role: "outer-ring", targetLotCount: 10, targetNetAreaM2: 1800, lotMix: { standard: 0, premium: 0, adjustment: 0, "tiny-house": 10 } },
+  
+  // M20-M24: Banda 7-8
+  { id: "M20", role: "north-reserve", targetLotCount: 16, targetNetAreaM2: 3000, lotMix: { standard: 0, premium: 0, adjustment: 0, "tiny-house": 16 } },
+  { id: "M21", role: "north-reserve", targetLotCount: 18, targetNetAreaM2: 3300, lotMix: { standard: 0, premium: 0, adjustment: 0, "tiny-house": 18 } },
+  { id: "M22", role: "outer-ring", targetLotCount: 5, targetNetAreaM2: 1200, lotMix: { standard: 5, premium: 0, adjustment: 0 } },
+  { id: "M23", role: "outer-ring", targetLotCount: 7, targetNetAreaM2: 2300, lotMix: { standard: 0, premium: 0, adjustment: 0, zen: 7 } },
+  { id: "M24", role: "outer-ring", targetLotCount: 12, targetNetAreaM2: 2760, lotMix: { standard: 10, premium: 2, adjustment: 0 } }
 ];

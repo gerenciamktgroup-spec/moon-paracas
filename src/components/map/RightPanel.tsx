@@ -2,67 +2,82 @@ import React from "react";
 import { Lot } from "../../types/map";
 import { BUSINESS_RULES } from "../../data/business";
 
-export function RightPanel({ lot }: { lot: Lot | null }) {
+export function RightPanel({ lot, onDeselect }: { lot: Lot | null, onDeselect?: () => void }) {
   if (!lot) {
     return (
-      <aside className="panel w-full md:w-[350px] bg-[#fdfcfb] border-l border-[#e8e2d7] p-8 flex flex-col shrink-0 shadow-[-4px_0_15px_rgba(0,0,0,0.03)] h-full overflow-y-auto">
-        <div className="panel__brand font-display font-black text-[#9e7e62] tracking-[0.2em] mb-8 text-xl">MOON PARACAS</div>
-        <h3 className="font-sans text-sm font-bold text-[#38342f] tracking-widest uppercase mb-4">Fase 0 - Founder</h3>
-        <p className="text-[#656059] text-sm leading-relaxed mb-6">Selecciona un lote en el masterplan para visualizar su información comercial y tipología.</p>
+      <aside className="w-full md:w-[360px] bg-white border-t md:border-t-0 md:border-l border-[var(--color-desert-taupe)] p-6 sm:p-10 flex flex-col shrink-0 shadow-[-10px_0_30px_rgba(0,0,0,0.02)] h-auto md:h-full overflow-y-auto">
+        <div className="font-display font-medium text-[var(--color-desert-bronze)] tracking-[0.25em] mb-10 text-xl uppercase">MOON PARACAS</div>
+        <h3 className="font-sans text-xs font-semibold text-[var(--color-desert-slate)] tracking-widest uppercase mb-4">Fase 0 - Founder</h3>
+        <p className="font-sans text-[var(--color-desert-slate)] text-sm leading-relaxed mb-6 font-light">Selecciona una parcela en el masterplan para visualizar su información técnica, tipología y disponibilidad comercial.</p>
         
-        <div className="mt-auto pt-6 border-t border-[#e8e2d7]">
-          <p className="text-[#8c8881] text-xs leading-relaxed italic">{BUSINESS_RULES.legalDisclaimer}</p>
+        <div className="mt-auto pt-8 border-t border-[var(--color-desert-taupe)]">
+          <p className="font-sans text-[#8C8881] text-[10px] leading-relaxed uppercase tracking-wider">{BUSINESS_RULES.legalDisclaimer}</p>
         </div>
       </aside>
     );
   }
 
+  const lotNum = lot.id.includes('-') ? lot.id.split('-')[1].replace('L', '') : lot.id;
+
   return (
-    <aside className="panel w-full md:w-[350px] bg-[#fdfcfb] border-l border-[#e8e2d7] p-8 flex flex-col shrink-0 shadow-[-4px_0_15px_rgba(0,0,0,0.03)] h-full overflow-y-auto animate-fade-in font-sans">
-      <div className="text-xs font-bold text-[#9e7e62] tracking-wider cursor-pointer hover:text-[#7d624b] transition-colors mb-6 uppercase">&larr; Volver al plano</div>
-      <h3 className="text-xs font-bold text-[#8c8881] tracking-widest uppercase mb-1">FASE 0 - FOUNDER</h3>
-      <h4 className="text-3xl font-display font-black text-[#38342f] mb-3">{lot.blockId} - {lot.id}</h4>
+    <aside className="w-full md:w-[360px] bg-white border-t md:border-t-0 md:border-l border-[var(--color-desert-taupe)] p-6 sm:p-10 flex flex-col shrink-0 shadow-[-10px_0_30px_rgba(0,0,0,0.02)] h-auto md:h-full overflow-y-auto animate-fade-in">
+      <div 
+        className="font-sans text-[10px] font-bold text-[var(--color-desert-bronze)] tracking-widest cursor-pointer hover:text-[var(--color-desert-charcoal)] transition-colors mb-8 uppercase flex items-center gap-2"
+        onClick={onDeselect}
+      >
+        <span>&larr;</span> VOLVER AL PLANO
+      </div>
       
-      <div className="mb-8">
-        <span className={`inline-block px-3 py-1 rounded-sm text-xs font-bold uppercase tracking-wider ${
-          lot.status === 'available' ? 'bg-[#a9bb8d] text-[#1e2d22]' :
-          lot.status === 'offer' ? 'bg-[#d8b07a] text-[#3e2c14]' :
-          lot.status === 'sold' ? 'bg-[#e8e2d7] text-[#5e584f]' :
-          'bg-[#6571df] text-white'
+      <h3 className="font-sans text-[10px] font-bold text-[var(--color-desert-slate)] tracking-widest uppercase mb-2">MANZANA {lot.blockId}</h3>
+      <h4 className="font-display text-4xl font-light text-[var(--color-desert-charcoal)] mb-6">Lote {lotNum}</h4>
+      
+      <div className="mb-10">
+        <span className={`font-sans inline-block px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest ${
+          lot.status === 'available' ? 'bg-[var(--color-status-available)] text-white' :
+          lot.status === 'offer' ? 'bg-[var(--color-status-offer)] text-white' :
+          lot.status === 'sold' ? 'bg-[var(--color-status-sold)] text-[var(--color-desert-charcoal)]' :
+          'bg-[var(--color-status-blocked)] text-[var(--color-desert-charcoal)]'
         }`}>
           {lot.status === 'available' ? 'DISPONIBLE' : 
-           lot.status === 'offer' ? 'OFERTA' : 
-           lot.status === 'sold' ? 'VENDIDO' : 'BLOQUEADO'}
+           lot.status === 'offer' ? 'EN OFERTA' : 
+           lot.status === 'sold' ? 'VENDIDO' : 'RESERVADO'}
         </span>
       </div>
 
-      <div className="space-y-4 mb-8">
-        <div className="metric flex justify-between items-center border-b border-[#f4efe5] pb-3">
-          <label className="text-sm text-[#656059]">Tipología</label>
-          <strong className="text-sm text-[#38342f] font-bold uppercase tracking-wide">{lot.typology}</strong>
+      <div className="space-y-5 mb-10 font-sans">
+        <div className="flex justify-between items-end border-b border-[var(--color-desert-taupe)] pb-3">
+          <label className="text-xs text-[var(--color-desert-slate)] font-light uppercase tracking-wider">Tipología</label>
+          <strong className="text-sm text-[var(--color-desert-charcoal)] font-medium uppercase tracking-wide">{lot.typology}</strong>
         </div>
 
-        <div className="metric flex justify-between items-center border-b border-[#f4efe5] pb-3">
-          <label className="text-sm text-[#656059]">Área aprox.</label>
-          <strong className="text-sm text-[#38342f] font-bold">{lot.areaM2.toFixed(2)} m²</strong>
+        <div className="flex justify-between items-end border-b border-[var(--color-desert-taupe)] pb-3">
+          <label className="text-xs text-[var(--color-desert-slate)] font-light uppercase tracking-wider">Área Exacta (Aprox.)</label>
+          <strong className="text-sm text-[var(--color-desert-charcoal)] font-medium">{lot.areaM2.toFixed(2)} m²</strong>
         </div>
 
-        <div className="metric flex justify-between items-center border-b border-[#f4efe5] pb-3">
-          <label className="text-sm text-[#656059]">Precio</label>
-          <strong className="text-sm text-[#9e7e62] font-bold">{lot.priceLabel}</strong>
+        {lot.dimensions && (
+          <div className="flex justify-between items-end border-b border-[var(--color-desert-taupe)] pb-3">
+            <label className="text-xs text-[var(--color-desert-slate)] font-light uppercase tracking-wider">Dimensiones</label>
+            <strong className="text-sm text-[var(--color-desert-charcoal)] font-medium">{lot.dimensions}</strong>
+          </div>
+        )}
+
+        <div className="flex justify-between items-end border-b border-[var(--color-desert-taupe)] pb-3">
+          <label className="text-xs text-[var(--color-desert-slate)] font-light uppercase tracking-wider">Inversión</label>
+          <strong className="text-sm text-[var(--color-desert-bronze)] font-semibold">{lot.priceLabel}</strong>
         </div>
       </div>
 
-      <p className="text-[#8c8881] text-[11px] leading-relaxed mb-8 bg-[#f4efe5] p-4 rounded border border-[#e8e2d7]">
-        Área de uso exclusivo aproximada dentro de un proyecto privado de baja densidad y desarrollo progresivo. No constituye habilitación urbana tradicional.
+      <p className="font-sans text-[var(--color-desert-slate)] text-[11px] leading-relaxed mb-10 bg-[var(--color-desert-sand)] p-5 rounded-sm border border-[var(--color-desert-taupe)] font-light">
+        Área de uso exclusivo calculada matemáticamente. Proyecto privado de baja densidad en desarrollo progresivo. No constituye habilitación urbana tradicional.
       </p>
 
-      <div className="flex flex-col gap-3 mt-auto">
-        <button className="w-full bg-[#1e2d22] text-white font-bold text-sm tracking-widest uppercase py-4 rounded hover:bg-[#2c4031] transition-colors">
-          Cotizar por WhatsApp
+      <div className="flex flex-col gap-4 mt-auto font-sans">
+        <button className="w-full bg-[var(--color-desert-charcoal)] text-white font-medium text-[11px] tracking-widest uppercase py-4 hover:bg-black transition-colors shadow-lg">
+          Contactar Asesor
         </button>
-        <button className="w-full bg-transparent border-2 border-[#1e2d22] text-[#1e2d22] font-bold text-sm tracking-widest uppercase py-3.5 rounded hover:bg-[#1e2d22] hover:text-white transition-colors">
-          Simular Reserva
+        <button className="w-full bg-transparent border border-[var(--color-desert-charcoal)] text-[var(--color-desert-charcoal)] font-medium text-[11px] tracking-widest uppercase py-4 hover:bg-[var(--color-desert-sand)] transition-colors">
+          Simular Inversión
         </button>
       </div>
     </aside>

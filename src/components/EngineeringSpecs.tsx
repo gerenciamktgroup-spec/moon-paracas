@@ -13,7 +13,7 @@ export const EngineeringSpecs: React.FC = () => {
     {
       title: "Cemento Tipo V: Protección contra Sulfatos",
       icon: <ShieldAlert className="h-5 w-5 text-[#E15A42]" />,
-      content: "El desierto salitroso y la proximidad marina presentan altos niveles de sulfatos que degradan el concreto normal. El Masterplan exige el uso de Cemento Tipo V en todas las cimentaciones, garantizando una alta resistencia a la corrosión y prolongando la vida útil estructural de tu inversión a más de 50 años."
+      content: "El desierto salitroso y las brisas de la costa presentan altos niveles de sulfatos que degradan el concreto normal. El Masterplan exige el uso de Cemento Tipo V en todas las cimentaciones, garantizando una alta resistencia a la corrosión y prolongando la vida útil estructural de tu inversión a más de 50 años."
     },
     {
       title: "Trazado Vial Anti-Viento Paracas",
@@ -21,9 +21,9 @@ export const EngineeringSpecs: React.FC = () => {
       content: "En lugar de la clásica cuadrícula que crea túneles de viento, nuestras calles tienen un diseño sinuoso y orgánico. Esto rompe la velocidad de los vientos predominantes (Sur a Norte), protegiendo la habitabilidad exterior, reduciendo el polvo y mejorando el confort térmico dentro de los clusters."
     },
     {
-      title: "Geografía de Tablazo (Cero Riesgo de Maremoto)",
+      title: "Geografía de Tablazo (Cero Riesgo de Inundación)",
       icon: <CheckCircle className="h-5 w-5 text-[#E15A42]" />,
-      content: "Al asentar el proyecto sobre el tablazo a más de 106 metros sobre el nivel del mar, Moon Paracas ofrece la vista del Océano Pacífico pero con absoluta seguridad frente a maremotos o subidas de marea, combinando lo mejor del desierto y la brisa marina."
+      content: "Al asentar el proyecto sobre el tablazo a más de 106 metros sobre el nivel del mar, Moon Paracas garantiza una absoluta seguridad física y estructural frente a inundaciones, maremotos o subidas de marea, consolidando un terreno sumamente estable en la meseta desértica."
     }
   ];
 

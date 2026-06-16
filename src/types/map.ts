@@ -24,21 +24,13 @@ export type TerrainModel = {
 };
 
 export type LotStatus = "available" | "offer" | "sold" | "blocked";
-export type LotTypology = "standard" | "premium" | "adjustment";
+export type LotTypology = "standard" | "premium" | "adjustment" | "zen" | "tiny-house" | "parking" | "parking-external";
 
 export type BlockRole =
-  | "access-west"
-  | "access-east"
-  | "south-west"
-  | "south-east"
-  | "central-west"
-  | "central-east"
-  | "oasis-west"
-  | "oasis-east"
-  | "north-west"
-  | "north-east"
-  | "north-remate-west"
-  | "north-remate-east";
+  | "inner-oasis"
+  | "middle-ring"
+  | "outer-ring"
+  | "north-reserve";
 
 export type BlockSpec = {
   id: string;
@@ -49,6 +41,8 @@ export type BlockSpec = {
     standard: number;
     premium: number;
     adjustment: number;
+    zen?: number;
+    "tiny-house"?: number;
   };
 };
 
@@ -70,14 +64,36 @@ export type Amenity = {
     | "firepit"
     | "sand-plaza"
     | "moon-deck"
-    | "xerophytic-garden";
+    | "xerophytic-garden"
+    | "yoga-plaza"
+    | "water-mirror"
+    | "palm-forest"
+    | "bus-bay"
+    | "welcome-center"
+    | "helipad"
+    | "gatehouse"
+    | "gatehouse-roof"
+    | "parking-driveway"
+    | "visitor-lobby"
+    | "parking-spot";
   polygon: XY[];
+  areaM2?: number;
 };
 
 export type BlockPolygon = {
   id: string;
-  role: BlockRole;
+  role: string;
   polygon: XY[];
+  labelPoint?: XY;
+  ringData?: {
+    innerPoly: XY[];
+    outerPoly: XY[];
+    t_start: number;
+    t_end: number;
+    t_start_low?: number;
+    t_start_high?: number;
+    isFirstRow?: boolean;
+  };
 };
 
 export type Lot = {
@@ -87,11 +103,12 @@ export type Lot = {
   status: LotStatus;
   areaM2: number;
   polygon: XY[];
+  dimensions?: string;
   priceLabel?: string;
   
   // Legacy compatibility for UI
   price: number;
-  number: number;
+  number: number | string;
   quadrant: string;
   area: number;
   elevation: number;

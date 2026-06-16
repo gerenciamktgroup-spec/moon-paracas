@@ -18,7 +18,7 @@ export const AuthScreen: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-stone-950 p-4 relative overflow-hidden">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-stone-950 p-4 relative overflow-hidden">
       {/* Background pattern */}
       <div 
         className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-30 mix-blend-luminosity"
