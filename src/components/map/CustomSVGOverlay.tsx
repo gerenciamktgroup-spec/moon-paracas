@@ -31,6 +31,8 @@ export const CustomSVGOverlay: React.FC<CustomSVGOverlayProps> = ({ terrainSvgPo
         this.div.style.position = "absolute";
         this.div.style.top = "0";
         this.div.style.left = "0";
+        this.div.style.width = "730px";
+        this.div.style.height = "820px";
         // The transform origin must be 0 0 for our matrix to work perfectly
         this.div.style.transformOrigin = "0 0";
         this.div.style.pointerEvents = "auto"; // allow clicking on lots
