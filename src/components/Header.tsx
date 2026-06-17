@@ -58,7 +58,18 @@ export const Header: React.FC = () => {
     }
   };
   return (
-    <header className="border-b-4 border-[#2D3339] bg-[#2D3339] text-white sticky top-0 z-40 px-6 py-4">
+    
+<header className="sticky top-0 z-40 flex flex-col w-full">
+  {/* Sticky Microcopy Bar (Low Anxiety) */}
+  <div className="w-full bg-[#E5E5DF] border-b border-[#D5D5CF] text-center py-1.5 px-4">
+    <p className="font-mono text-[10px] sm:text-xs font-bold uppercase tracking-widest text-[#5C6150]">
+      Antes de cotizar, entiende qué sostiene el proyecto.
+    </p>
+  </div>
+  
+  {/* Main Header */}
+  <div className="border-b-4 border-[#2D3339] bg-[#2D3339] text-white px-6 py-4">
+
       <div className="mx-auto flex max-w-[1400px] flex-col items-center justify-between gap-4 lg:flex-row">
         {/* Brand Sign */}
         <div className="flex items-center gap-4">
@@ -97,6 +108,7 @@ export const Header: React.FC = () => {
           ))}
         </div>
       </div>
-    </header>
+      </div>
+</header>
   );
 };

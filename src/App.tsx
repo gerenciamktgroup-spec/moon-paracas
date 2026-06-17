@@ -7,6 +7,11 @@ import { ConceptGallery } from "./components/ConceptGallery";
 import { LifestyleAmenities } from "./components/LifestyleAmenities";
 import { EngineeringSpecs } from "./components/EngineeringSpecs";
 import { ContractsSignature } from "./components/ContractsSignature";
+
+import { ExperienceAnchor } from "./components/ExperienceAnchor";
+import { TechnicalLegacy } from "./components/TechnicalLegacy";
+import { ObjectionsBridge } from "./components/ObjectionsBridge";
+
 import { ParacasHistory } from "./components/ParacasHistory";
 import { ArchitecturalRecommendations } from "./components/ArchitecturalRecommendations";
 import { ShieldCheck, Trees, Phone, Mail, Map, Compass, HardHat, MessageSquare, Sparkles, Lock, BookOpen, Home } from "lucide-react";
@@ -261,8 +266,18 @@ export default function App() {
             ========================================= */}
         <div className="flex flex-col space-y-32 mt-16">
           
-          {/* 1. HISTORY & CONCEPT */}
+          
+          {/* 1. LEGITIMIDAD Y EXPERIENCIA (NUEVO) */}
+          <ExperienceAnchor />
+          <TechnicalLegacy />
+
+          {/* 2. HISTORIA & CONCEPTO */}
           <section id="history" className="scroll-mt-24 space-y-24">
+            <div className="text-center mt-12 mb-[-4rem]">
+               <span className="font-mono text-[10px] uppercase tracking-widest text-[#C4A484] border border-[#C4A484] px-3 py-1 rounded-full">
+                 La suma de este aprendizaje se refleja en
+               </span>
+            </div>
             <ParacasHistory />
           </section>
 
@@ -274,19 +289,28 @@ export default function App() {
             <ArchitecturalRecommendations />
           </section>
 
-          {/* 2. LIFESTYLE & AMENITIES */}
+          {/* 3. LIFESTYLE & AMENITIES */}
           <section id="lifestyle" className="scroll-mt-24">
+            <div className="text-center mt-12 mb-[-4rem]">
+               <span className="font-mono text-[10px] uppercase tracking-widest text-stone-400 border border-stone-300 px-3 py-1 rounded-full">
+                 Habiendo validado la viabilidad, proponemos
+               </span>
+            </div>
             <LifestyleAmenities />
           </section>
 
-          {/* 3. PRODUCT: MASTERPLAN */}
+          {/* 4. PUENTE DE OBJECIONES ANTES DEL MAPA */}
+          <ObjectionsBridge />
+
+          {/* 5. PRODUCT: MASTERPLAN */}
+
           <section id="masterplan" className="scroll-mt-24">
              <div className="text-center space-y-4 mb-8">
                <h2 className="font-display text-4xl sm:text-5xl font-black text-[#2D3339] uppercase tracking-wider">
-                 Masterplan Interactivo
+                 Explora la lógica del desarrollo
                </h2>
                <p className="text-stone-600 font-mono text-sm max-w-2xl mx-auto">
-                 Explora el diseño concéntrico de Moon Paracas. Haz zoom, selecciona parcelas y verifica disponibilidad en tiempo real.
+                 Aquí el valor del lote depende también del conjunto. Trazados eólicos empíricos aplicados para mitigar la fricción de la Paraca y proteger el espacio habitacional.
                </p>
              </div>
              <div className="w-full">
@@ -302,10 +326,10 @@ export default function App() {
           <section id="financiamiento" className="scroll-mt-24 w-full max-w-2xl mx-auto">
             <div className="text-center space-y-2 mb-6">
                <h2 className="font-display text-3xl font-black text-[#2D3339] uppercase tracking-wider">
-                 Cotizador en Tiempo Real
+                 Calcula tu cronograma
                </h2>
                <p className="text-stone-500 font-mono text-sm max-w-lg mx-auto">
-                 Verifica las cuotas y planes de financiamiento directo a 18 meses con 0% de interés del lote seleccionado.
+                 Sin intermediarios bancarios, con una estructura de crédito directo diseñada para proteger tu flujo de caja mientras la obra avanza.
                </p>
             </div>
             <LotDetailsModal
