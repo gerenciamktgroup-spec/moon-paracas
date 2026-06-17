@@ -21,6 +21,15 @@ export function buildRoads(innerBuffer: XY[]): Road[] {
       path: [entryBoulevardStart, entryBoulevardEnd]
     },
     // Removed redundant CROSS_ROAD_ENTRANCE which was drawn under the parking lot
+        {
+      id: "CROSS_ROAD_ENTRANCE",
+      kind: "secondary" as const,
+      widthM: 6,
+      path: [
+        getBandPoint(innerBuffer, 0.15, 0, scale),
+        getBandPoint(innerBuffer, 0.15, 231, scale)
+      ]
+    },
     // Rear Perimeter Cross Road (Flush against the back wall)
     {
       id: "CROSS_ROAD_BACK",
@@ -57,7 +66,7 @@ export function buildRoads(innerBuffer: XY[]): Road[] {
       kind: "secondary" as const,
       widthM: 6,
       path: [
-        getBandPoint(innerBuffer, getMaxTForD(D_k) + 0.015, D_k, scale),
+        getBandPoint(innerBuffer, 0.025, D_k, scale),
         getBandPoint(innerBuffer, 0.99, D_k, scale)
       ]
     }))

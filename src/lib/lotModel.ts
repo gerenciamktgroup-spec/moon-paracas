@@ -443,20 +443,23 @@ export function buildParkingLots(innerBuffer: XY[], obstacles: XY[][] = []): Lot
 
   function fillParkingStrips(dStart: number, dEnd: number, prefix: string) {
     for (let d = dStart; d <= dEnd; d += 2.5) {
-      let currentT = 0.032; 
-      const boundaryT = getMaxTForD(d + 1.25) - 0.008; 
+      if (d % 20 > 15) continue; // Leave gaps for driveways
+      let currentT = 0.035; 
+      const boundaryT = getMaxTForD(d + 1.25) - 0.005; 
 
       while (currentT <= boundaryT) {
          const p1 = createParkingLot(prefix, {tCenter: currentT}, d + 1.25);
          if (!checkCollision(p1.polygon, obstacles)) lots.push(p1);
          
-         let nextT = currentT + 0.015; 
+         // Aisle of 6.5 meters between rows facing each other (0.018 in t-space + 2 half spots = 0.032)
+         let nextT = currentT + 0.032; 
          if (nextT <= boundaryT) {
             const p2 = createParkingLot(prefix, {tCenter: nextT}, d + 1.25);
             if (!checkCollision(p2.polygon, obstacles)) lots.push(p2);
          }
 
-         currentT = nextT + 0.025; 
+         // Back to back gap of 0 meters between blocks (0.014 in t-space)
+         currentT = nextT + 0.014; 
       }
     }
   }
@@ -472,7 +475,7 @@ export function buildParkingLots(innerBuffer: XY[], obstacles: XY[][] = []): Lot
   function fillExternalParking(dStart: number, dEnd: number, prefix: string) {
     for (let d = dStart; d <= dEnd; d += 2.5) {
       extCount++;
-      const p = createParkingLot(prefix, {tCenter: -0.008}, d + 1.25, "parking-external");
+      const p = createParkingLot(prefix, {tCenter: -0.012}, d + 1.25, "parking-external");
       if (!checkCollision(p.polygon, obstacles)) lots.push(p);
     }
   }
