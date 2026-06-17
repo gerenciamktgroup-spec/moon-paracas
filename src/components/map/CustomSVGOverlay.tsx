@@ -31,8 +31,9 @@ export const CustomSVGOverlay: React.FC<CustomSVGOverlayProps> = ({ terrainSvgPo
         this.div.style.position = "absolute";
         this.div.style.top = "0";
         this.div.style.left = "0";
-        this.div.style.width = "730px";
-        this.div.style.height = "820px";
+        this.div.style.width = "100%";
+        this.div.style.height = "100%";
+        this.div.style.overflow = "visible";
         // The transform origin must be 0 0 for our matrix to work perfectly
         this.div.style.transformOrigin = "0 0";
         this.div.style.pointerEvents = "auto"; // allow clicking on lots
@@ -60,7 +61,13 @@ export const CustomSVGOverlay: React.FC<CustomSVGOverlayProps> = ({ terrainSvgPo
 
         if (matrix) {
           const [a, b, c, d, tx, ty] = matrix;
-          this.div.style.transform = `matrix(${a}, ${b}, ${c}, ${d}, ${tx}, ${ty})`;
+          // Apply matrix directly to the SVG group element for infinite vector sharpness!
+          const g = this.div.querySelector('#masterplan-g');
+          if (g) {
+            g.setAttribute('transform', `matrix(${a}, ${b}, ${c}, ${d}, ${tx}, ${ty})`);
+          }
+          // Remove div transform if it was there
+          this.div.style.transform = "none";
         }
       }
 

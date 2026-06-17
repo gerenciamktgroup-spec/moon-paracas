@@ -182,17 +182,10 @@ export function MapCanvas({
           streetViewControl={false}
         />
         <CustomSVGOverlay terrainSvgPoints={scene.terrain}>
-            <svg
-              ref={svgRef}
-              viewBox="0 0 730 820"
-              className="w-full h-full pointer-events-auto drop-shadow-2xl"
-              preserveAspectRatio="xMidYMid meet"
-            >
+            <svg ref={svgRef} className="w-full h-full pointer-events-auto" style={{ position: "absolute", top: 0, left: 0, overflow: "visible" }}>
+<g id="masterplan-g">
               <defs>
-                <filter id="terrain-tex" x="0%" y="0%" width="100%" height="100%">
-                  <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" stitchTiles="stitch" result="n" />
-                  <feBlend in="SourceGraphic" in2="n" mode="multiply" />
-                </filter>
+                
                 <filter id="lot-sel" x="-10%" y="-10%" width="120%" height="120%">
                   <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#1a0a00" floodOpacity="0.5" />
                 </filter>
@@ -496,8 +489,9 @@ export function MapCanvas({
                 fill="var(--color-desert-bronze)" opacity={0.06} pointerEvents="none" letterSpacing="0.2em">
                 MOON PARACAS
               </text>
-            </svg>
-          </CustomSVGOverlay>
+</g>
+</svg>
+</CustomSVGOverlay>
       </APIProvider>
     </div>
   );
