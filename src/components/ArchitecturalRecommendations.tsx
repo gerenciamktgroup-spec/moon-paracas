@@ -25,11 +25,18 @@ export const ArchitecturalRecommendations = () => {
           <div className="flex flex-col lg:flex-row gap-12 items-center">
             <div className="w-full lg:w-1/2">
               <div className="grid grid-cols-2 gap-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="bg-slate-200 rounded-xl aspect-[4/3] flex items-center justify-center overflow-hidden shadow-md">
-                    <span className="text-slate-400 font-medium">[Domo Imagen {i}]</span>
-                  </div>
-                ))}
+                <div className="bg-slate-200 rounded-xl aspect-[4/3] flex items-center justify-center overflow-hidden shadow-md">
+                  <img src="/images/domo_ext_1.png" alt="Domo Exterior" className="w-full h-full object-cover" />
+                </div>
+                <div className="bg-slate-200 rounded-xl aspect-[4/3] flex items-center justify-center overflow-hidden shadow-md">
+                  <img src="/images/domo_ext_2.png" alt="Domo Panorámico" className="w-full h-full object-cover" />
+                </div>
+                <div className="bg-slate-200 rounded-xl aspect-[4/3] flex items-center justify-center overflow-hidden shadow-md">
+                  <img src="/images/domo_int_1.png" alt="Domo Interior Día" className="w-full h-full object-cover" />
+                </div>
+                <div className="bg-slate-200 rounded-xl aspect-[4/3] flex items-center justify-center overflow-hidden shadow-md">
+                  <img src="/images/domo_int_2.png" alt="Domo Interior Noche" className="w-full h-full object-cover" />
+                </div>
               </div>
             </div>
             <div className="w-full lg:w-1/2 space-y-6">
