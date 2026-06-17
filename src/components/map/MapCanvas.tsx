@@ -182,23 +182,12 @@ export function MapCanvas({
           streetViewControl={false}
         />
         <CustomSVGOverlay terrainSvgPoints={scene.terrain}>
-            <svg ref={svgRef} className="w-full h-full pointer-events-auto" style={{ position: "absolute", top: 0, left: 0, overflow: "visible" }}>
-<g id="masterplan-g">
+            <svg ref={svgRef} viewBox="0 0 730 820" className="w-full h-full pointer-events-auto">
               <defs>
                 
-                <filter id="lot-sel" x="-10%" y="-10%" width="120%" height="120%">
-                  <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#1a0a00" floodOpacity="0.5" />
-                </filter>
-                <filter id="label-bg" x="-5%" y="-5%" width="110%" height="110%">
-                  <feDropShadow dx="0" dy="1" stdDeviation="1" floodColor="#000" floodOpacity="0.8" />
-                </filter>
-                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feGaussianBlur stdDeviation="1.5" result="blur" />
-                  <feMerge>
-                    <feMergeNode in="blur"/>
-                    <feMergeNode in="SourceGraphic"/>
-                  </feMerge>
-                </filter>
+                
+                
+                
                 <radialGradient id="terrain-grad" cx="45%" cy="40%" r="70%">
                   <stop offset="0%"   stopColor="#2A2F35" />
                   <stop offset="55%"  stopColor="#202428" />
@@ -256,12 +245,12 @@ export function MapCanvas({
                       </g>
                     )}
                     {/* Amber floor bollard lighting glow (continuous) */}
-                    <path d={d} fill="none" stroke="#D4A373" strokeWidth={isPrimary ? 1.5 : 0.8} strokeDasharray={isPrimary ? "4 8" : "2 6"} strokeLinecap="round" strokeLinejoin="round" filter="url(#glow)" opacity={0.8} />
+                    <path d={d} fill="none" stroke="#D4A373" strokeWidth={isPrimary ? 1.5 : 0.8} strokeDasharray={isPrimary ? "4 8" : "2 6"} strokeLinecap="round" strokeLinejoin="round"  opacity={0.8} />
                     {isPrimary && <path d={d} fill="none" stroke="#E15A42" strokeWidth={0.5} strokeDasharray="8 6" strokeLinecap="round" opacity={0.4} />}
                     
                     {/* Farolitos de piso en las esquinas */}
                     {r.path.map((pt, i) => (
-                       <circle key={`farol-${r.id}-${i}`} cx={pt.x} cy={pt.y} r={isPrimary ? 1.5 : 1.0} fill="#FFF3E0" filter="url(#glow)" opacity={0.9} />
+                       <circle key={`farol-${r.id}-${i}`} cx={pt.x} cy={pt.y} r={isPrimary ? 1.5 : 1.0} fill="#FFF3E0"  opacity={0.9} />
                     ))}
                   </g>
                 );
@@ -356,7 +345,7 @@ export function MapCanvas({
                       {/* Transparent Square TLOF border */}
                       <path d={pathFromPolygon(a.polygon)} fill="transparent" stroke="white" strokeWidth={1.5} opacity={0.9} />
                       {/* International H symbol */}
-                      <text x={cPt.x} y={cPt.y} fill="white" fontSize={dist * 0.7} fontWeight="bold" textAnchor="middle" dominantBaseline="central" style={{ fontFamily: 'Arial, sans-serif', filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.5))' }}>H</text>
+                      <text x={cPt.x} y={cPt.y} fill="white" fontSize={dist * 0.7} fontWeight="bold" textAnchor="middle" dominantBaseline="central" style={{ fontFamily: 'Arial, sans-serif',  }}>H</text>
                     </g>
                   );
                 }
@@ -489,7 +478,6 @@ export function MapCanvas({
                 fill="var(--color-desert-bronze)" opacity={0.06} pointerEvents="none" letterSpacing="0.2em">
                 MOON PARACAS
               </text>
-</g>
 </svg>
 </CustomSVGOverlay>
       </APIProvider>
