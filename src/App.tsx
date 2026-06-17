@@ -162,7 +162,13 @@ export default function App() {
   };
 
   // Helper metrics for overall dashboard counters
-  const disponCount = lots.filter((l) => l.status === "available").length;
+  const residentialLots = lots.filter(l => l.blockId !== "PARKING");
+  const parkingLots = lots.filter(l => l.blockId === "PARKING");
+  
+  const libresCount = residentialLots.filter(l => l.status === "available" || l.status === "offer").length;
+  const reservadosCount = residentialLots.filter(l => l.status === "reserved").length;
+  const vendidosCount = residentialLots.filter(l => l.status === "sold").length;
+  const cocherasCount = parkingLots.length;
 
   return (
     <>
