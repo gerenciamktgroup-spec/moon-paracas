@@ -183,11 +183,11 @@ export default function App() {
         )}
 
         {/* Modern Luxury Hero Banner */}
-        <div className="relative rounded-3xl overflow-hidden min-h-[500px] sm:min-h-[600px] flex items-end shadow-2xl group mb-8 border border-stone-200/50">
+        <div className="relative rounded-3xl overflow-hidden min-h-[350px] sm:min-h-[400px] flex items-end shadow-2xl group mb-8 border border-stone-200/50">
           {/* Background image - fully visible */}
           <div 
             className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat transition-transform duration-1000 group-hover:scale-105"
-            style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1682687982501-1e58f813f222?q=80&w=2600&auto=format&fit=crop")' }}
+            style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1509316785289-025f5b846b35?q=80&w=2600&auto=format&fit=crop")' }}
           />
           {/* Elegant gradient overlay - dark at bottom for text readability, fully transparent at top */}
           <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-900/60 to-transparent z-0" />

@@ -3,10 +3,10 @@ import { Lot, LotStatus } from "../../../types/map";
 import { pathFromPolygon, centroid } from "../../../lib/geometry";
 
 const statusConfig: Record<LotStatus, { fill: string; stroke: string; label: string }> = {
-  available: { fill: "#748D70",  stroke: "#4A5D47", label: "DISPONIBLE" },
-  offer:     { fill: "#8EA98A",  stroke: "#627B5E", label: "EN OFERTA"  },
-  sold:      { fill: "#D6D1CA",  stroke: "#B5B0A9", label: "VENDIDO"    },
-  blocked:   { fill: "#EADCC9",  stroke: "#CBBDAA", label: "RESERVADO"  },
+  available: { fill: "#748D70",  stroke: "#3A4D37", label: "DISPONIBLE" },
+  offer:     { fill: "#8EA98A",  stroke: "#4A6B4A", label: "EN OFERTA"  },
+  sold:      { fill: "#D32F2F",  stroke: "#B71C1C", label: "VENDIDO"    },
+  blocked:   { fill: "#F57C00",  stroke: "#E65100", label: "RESERVADO"  },
 };
 
 export function LotsLayer({
@@ -36,9 +36,9 @@ export function LotsLayer({
         const baseStroke = isInternalParking ? "#6e675b" : isExternalParking ? "#45484c" : cfg.stroke;
 
         // Transparent tint for residential lots, and semi-transparent for parking
-        const fillOpacity = isParking ? (isSelected ? 0.7 : isHovered ? 0.6 : 0.4) : (isSelected ? 0.3 : isHovered ? 0.2 : 0.08);
+        const fillOpacity = isParking ? (isSelected ? 0.8 : isHovered ? 0.7 : 0.5) : (isSelected ? 0.8 : isHovered ? 0.7 : 0.45);
         const strokeColor = isSelected ? "#A67C52" : baseStroke;
-        const strokeWidth = isSelected ? 2.5 : isHovered ? 1.5 : 0.8;
+        const strokeWidth = isSelected ? 3.0 : isHovered ? 2.0 : 1.5;
 
         const hasPin = !isParking && (lot.status === "available" || lot.status === "offer");
         const center = hasPin ? centroid(lot.polygon) : { x: 0, y: 0 };
