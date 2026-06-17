@@ -175,7 +175,7 @@ export default function App() {
       <div className="min-h-[100dvh] bg-[#F4F4F1] font-sans selection:bg-[#C4A484] selection:text-[#2D3339] pb-16">
         
         {/* Premium Header */}
-        <Header activeTab={activeTab} setActiveTab={setActiveTab} />
+        <Header />
 
       {/* Main Container Wrapper */}
       <main className="mx-auto max-w-7xl px-4 sm:px-6 py-6 space-y-8">
@@ -255,118 +255,83 @@ export default function App() {
 
 
 
-        {/* Dynamic Content based on tabs */}
-        <AnimatePresence mode="wait">
-          {activeTab === "masterplan" && (
-            <motion.div
-              key="masterplan-tab"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
-              className="flex flex-col gap-12"
-            >
-              <div className="w-full">
+        
+        {/* =========================================
+            LONG-SCROLL STORYTELLING CONTENT 
+            ========================================= */}
+        <div className="flex flex-col space-y-32 mt-16">
+          
+          {/* 1. HISTORY & CONCEPT */}
+          <section id="history" className="scroll-mt-24 space-y-24">
+            <ParacasHistory />
+          </section>
+
+          <section id="concept" className="scroll-mt-24">
+            <ConceptGallery />
+          </section>
+
+          <section id="architecture" className="scroll-mt-24">
+            <ArchitecturalRecommendations />
+          </section>
+
+          {/* 2. LIFESTYLE & AMENITIES */}
+          <section id="lifestyle" className="scroll-mt-24">
+            <LifestyleAmenities />
+          </section>
+
+          {/* 3. PRODUCT: MASTERPLAN */}
+          <section id="masterplan" className="scroll-mt-24">
+             <div className="text-center space-y-4 mb-8">
+               <h2 className="font-display text-4xl sm:text-5xl font-black text-[#2D3339] uppercase tracking-wider">
+                 Masterplan Interactivo
+               </h2>
+               <p className="text-stone-600 font-mono text-sm max-w-2xl mx-auto">
+                 Explora el diseño concéntrico de Moon Paracas. Haz zoom, selecciona parcelas y verifica disponibilidad en tiempo real.
+               </p>
+             </div>
+             <div className="w-full">
                 <MoonParacasMap
                   lots={lots}
                   selectedLot={selectedLot}
                   onSelectLot={setSelectedLot}
                 />
-              </div>
+             </div>
+          </section>
 
-              {/* Interactive Lot Details & Payment Simulator (Centered below) */}
-              <div id="financial-model" className="w-full max-w-2xl mx-auto space-y-6 scroll-mt-24">
-                <div className="text-center space-y-2 mb-4">
-                   <h2 className="font-display text-2xl font-black text-[#2D3339] uppercase tracking-wider">Simulador de Financiamiento</h2>
-                   <p className="text-stone-500 font-mono text-sm max-w-lg mx-auto">Verifica las cuotas y planes de pago directo del lote actualmente seleccionado en el masterplan superior.</p>
-                </div>
-                <LotDetailsModal
-                  lot={selectedLot}
-                  onReserve={handleReserveLot}
-                />
-              </div>
-            </motion.div>
-          )}
+          {/* 4. FINANCIAL SIMULATOR */}
+          <section id="financiamiento" className="scroll-mt-24 w-full max-w-2xl mx-auto">
+            <div className="text-center space-y-2 mb-6">
+               <h2 className="font-display text-3xl font-black text-[#2D3339] uppercase tracking-wider">
+                 Cotizador en Tiempo Real
+               </h2>
+               <p className="text-stone-500 font-mono text-sm max-w-lg mx-auto">
+                 Verifica las cuotas y planes de financiamiento directo a 18 meses con 0% de interés del lote seleccionado.
+               </p>
+            </div>
+            <LotDetailsModal
+              lot={selectedLot}
+              onReserve={handleReserveLot}
+            />
+          </section>
 
-          {activeTab === "concept" && (
-            <motion.div
-              key="concept-tab"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
-            >
-              {/* Architectural Concept Hotspot gallery matching AI photos */}
-              <ConceptGallery />
-            </motion.div>
-          )}
+          {/* 5. ENGINEERING SPECS */}
+          <section id="engineering" className="scroll-mt-24">
+            <EngineeringSpecs />
+          </section>
 
-          {activeTab === "lifestyle" && (
-            <motion.div
-              key="lifestyle-tab"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
-            >
-              <LifestyleAmenities />
-            </motion.div>
-          )}
+          {/* 6. CONTRACTS & SIGNATURE */}
+          <section id="signature" className="scroll-mt-24">
+            <ContractsSignature 
+              selectedLot={selectedLot}
+              onSignatureSuccess={(msg) => {
+                setToastMessage(msg);
+                setTimeout(() => setToastMessage(null), 5500);
+              }}
+            />
+          </section>
 
-          {activeTab === "engineering" && (
-            <motion.div
-              key="engineering-tab"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
-            >
-              <EngineeringSpecs />
-            </motion.div>
-          )}
+        </div>
 
-          {activeTab === "signature" && (
-            <motion.div
-              key="signature-tab"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
-            >
-              <ContractsSignature 
-                selectedLot={selectedLot}
-                onSignatureSuccess={(msg) => {
-                  setToastMessage(msg);
-                  setTimeout(() => setToastMessage(null), 5500);
-                }}
-              />
-            </motion.div>
-          )}
-
-          {activeTab === "history" && (
-            <motion.div
-              key="history-tab"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
-            >
-              <ParacasHistory />
-            </motion.div>
-          )}
-
-          {activeTab === "architecture" && (
-            <motion.div
-              key="architecture-tab"
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
-            >
-              <ArchitecturalRecommendations />
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* CONTACT US FORM (Inspired directly by the reference website layout) */}
         <div id="contact-form" className="rounded-none border-4 border-[#2D3339] bg-white p-6 sm:p-8 shadow-lg space-y-6">

@@ -49,10 +49,15 @@ export const MoonLogo: React.FC<{ className?: string; size?: number; dark?: bool
   );
 };
 
-export const Header: React.FC<{
-  activeTab: "masterplan" | "concept" | "lifestyle" | "engineering" | "signature" | "history" | "architecture";
-  setActiveTab: (tab: "masterplan" | "concept" | "lifestyle" | "engineering" | "signature" | "history" | "architecture") => void;
-}> = ({ activeTab, setActiveTab }) => {  return (
+export const Header: React.FC = () => {
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      const y = el.getBoundingClientRect().top + window.scrollY - 100;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  };
+  return (
     <header className="border-b-4 border-[#2D3339] bg-[#2D3339] text-white sticky top-0 z-40 px-6 py-4">
       <div className="mx-auto flex max-w-[1400px] flex-col items-center justify-between gap-4 lg:flex-row">
         {/* Brand Sign */}
@@ -83,12 +88,8 @@ export const Header: React.FC<{
           ].map((item) => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id as any)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap text-xs font-bold uppercase tracking-widest transition-all duration-300 border-2 ${
-                activeTab === item.id 
-                  ? "bg-[#C4A484] border-[#C4A484] text-[#2D3339] shadow-md" 
-                  : "bg-transparent border-stone-600 text-stone-400 hover:border-[#C4A484] hover:text-white"
-              }`}
+              onClick={() => scrollToSection(item.id)}
+              className="flex items-center gap-2 px-4 py-2 rounded-full whitespace-nowrap text-xs font-bold uppercase tracking-widest transition-all duration-300 border-2 bg-transparent border-stone-600 text-stone-400 hover:border-[#C4A484] hover:text-white"
             >
               {item.icon}
               {item.label}
