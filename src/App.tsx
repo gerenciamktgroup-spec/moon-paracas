@@ -252,7 +252,6 @@ export default function App() {
             <p className="font-display font-black text-stone-500 text-2xl sm:text-3xl">{cocherasCount}</p>
           </div>
         </div>
-        </div>
 
 
 
