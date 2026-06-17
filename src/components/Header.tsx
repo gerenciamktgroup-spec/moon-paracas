@@ -63,7 +63,7 @@ export const Header: React.FC = () => {
   {/* Sticky Microcopy Bar (Low Anxiety) */}
   <div className="w-full bg-[#E5E5DF] border-b border-[#D5D5CF] text-center py-1.5 px-4">
     <p className="font-mono text-[10px] sm:text-xs font-bold uppercase tracking-widest text-[#5C6150]">
-      Antes de cotizar, entiende qué sostiene el proyecto.
+      Arquitectura, paisaje y estructura: el privilegio de la baja densidad.
     </p>
   </div>
   
@@ -89,7 +89,7 @@ export const Header: React.FC = () => {
         {/* Horizontal Nav Pills - Scrollable on mobile */}
         <div className="flex overflow-x-auto hide-scrollbar w-full lg:w-auto items-center gap-2 pb-2 lg:pb-0 pt-2 lg:pt-0 border-t border-stone-700 lg:border-none mt-2 lg:mt-0">
           {[
-            { id: "masterplan", icon: <TreePine className="w-4 h-4" />, label: "Masterplan" },
+            { id: "masterplan", icon: <TreePine className="w-4 h-4" />, label: "Territorio" },
             { id: "history", icon: <CalendarDays className="w-4 h-4" />, label: "Historia" },
             { id: "architecture", icon: <User className="w-4 h-4" />, label: "Casas" },
             { id: "lifestyle", icon: <TreePine className="w-4 h-4" />, label: "Estilo Vida" },

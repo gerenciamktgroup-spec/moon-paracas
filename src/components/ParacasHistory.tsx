@@ -5,15 +5,15 @@ import { Wind, Sun, Home, Compass } from 'lucide-react';
 export const ParacasHistory = () => {
   const historySections = [
     {
-      title: "El Viento y El Desierto",
-      description: "Inspirado en la fuerza del legendario viento 'El Paracas', nuestra arquitectura de adobe y pircas de piedra natural se mimetiza orgánicamente con las majestuosas dunas del desierto, creando un refugio de paz absoluta.",
+      title: "Lectura del desierto antes de construir",
+      description: "Nuestra propuesta no impone arquitectura; la integra. Entendimos la dinámica eólica y la topografía milenaria de Paracas para diseñar un refugio donde el confort es resultado directo de la sensatez estructural.",
       icon: <Wind className="w-8 h-8 text-amber-600" />,
       image: "/images/history/history-10.png",
       reverse: false
     },
     {
-      title: "Textiles Antiguos y Diseño Interior",
-      description: "El misticismo de la cultura milenaria de Paracas vive en los interiores de nuestras villas. Tonos terracota, ocres y vigas de eucalipto crean una atmósfera rústica de lujo que conecta el pasado con el presente.",
+      title: "El criterio de la integración",
+      description: "La materialidad (tonos terracota, ocres y madera) no es un capricho estético. Responde a la necesidad térmica del territorio, creando un hábitat que dialoga con el entorno en lugar de competir con él.",
       icon: <Compass className="w-8 h-8 text-amber-600" />,
       image: "/images/history/history-5.png",
       reverse: true

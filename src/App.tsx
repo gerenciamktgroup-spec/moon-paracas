@@ -241,15 +241,15 @@ export default function App() {
         {/* Quick numbers tracker bar (Marketing style) */}
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4 mt-8 pb-4 text-center">
           <div className="bg-white border-4 border-[#2D3339] p-4 shadow-[4px_4px_0px_#A3B18A]">
-            <p className="text-xs font-bold text-[#A3B18A] uppercase tracking-widest mb-1.5">Lotes Libres</p>
+            <p className="text-xs font-bold text-[#A3B18A] uppercase tracking-widest mb-1.5">Disponibilidad Fase 1</p>
             <p className="font-display font-black text-[#A3B18A] text-2xl sm:text-3xl">{libresCount}</p>
           </div>
           <div className="bg-white border-4 border-[#2D3339] p-4 shadow-[4px_4px_0px_#F57C00]">
-            <p className="text-xs font-bold text-[#F57C00] uppercase tracking-widest mb-1.5">Lotes Reservados</p>
+            <p className="text-xs font-bold text-[#F57C00] uppercase tracking-widest mb-1.5">Lotes Asignados</p>
             <p className="font-display font-black text-[#F57C00] text-2xl sm:text-3xl">{reservadosCount}</p>
           </div>
           <div className="bg-white border-4 border-[#2D3339] p-4 shadow-[4px_4px_0px_#D32F2F]">
-            <p className="text-xs font-bold text-[#D32F2F] uppercase tracking-widest mb-1.5">Lotes Vendidos</p>
+            <p className="text-xs font-bold text-[#D32F2F] uppercase tracking-widest mb-1.5">Lotes Patrimonio Consolidado</p>
             <p className="font-display font-black text-[#D32F2F] text-2xl sm:text-3xl">{vendidosCount}</p>
           </div>
           <div className="bg-white border-4 border-[#2D3339] p-4 shadow-[4px_4px_0px_#9E9E9E]">
@@ -357,7 +357,7 @@ export default function App() {
         </div>
 
 
-        {/* CONTACT US FORM (Inspired directly by the reference website layout) */}
+        {/* SOLICITAR ASESORÍA PRIVADA (Inspired directly by the reference website layout) */}
         <div id="contact-form" className="rounded-none border-4 border-[#2D3339] bg-white p-6 sm:p-8 shadow-lg space-y-6">
           <div className="text-center max-w-2xl mx-auto space-y-3">
             <h2 className="font-sans text-sm font-black tracking-widest text-[#8C905C] uppercase">
@@ -404,6 +404,9 @@ export default function App() {
               }}
               className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto font-mono text-xs"
             >
+              <div className="md:col-span-2 mb-4 p-3 bg-stone-100 border-l-4 border-[#C4A484] text-xs text-stone-600 font-mono">
+                Al solicitar asesoría, garantizamos absoluta confidencialidad sobre su estructuración de pagos.
+              </div>
               {/* Left Column Fields */}
               <div className="space-y-3 text-[#2D3339]">
                 <div className="space-y-1">
@@ -470,7 +473,7 @@ export default function App() {
                   <textarea
                     rows={3}
                     className="w-full rounded-none border-2 border-[#2D3339] px-3.5 py-2 hover:bg-stone-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8C905C] flex-1 min-h-[90px] transition-colors text-[#2D3339]"
-                    placeholder="Deseo coordinar una videollamada para revisar el cronograma de financiamiento de mi lote y verificar de áreas comunes..."
+                    placeholder="Deseo revisar los planos arquitectónicos y evaluar la estructura de financiamiento directo para la Fase 1..."
                     value={contactMessage}
                     onChange={(e) => setContactMessage(e.target.value)}
                   />
@@ -483,7 +486,7 @@ export default function App() {
                   type="submit"
                   className="flex-1 bg-[#8C905C] border-2 border-[#2D3339] text-white font-bold text-xs py-3.5 px-6 uppercase tracking-widest hover:bg-[#7a7e4e] transition-all shadow-[3px_3px_0px_#2D3339] active:translate-y-0.5 active:shadow-[1px_1px_0px_#2D3339]"
                 >
-                  ENVIAR SOLICITUD A LA ASOCIACIÓN
+                  INICIAR EVALUACIÓN DE INGRESO
                 </button>
                 
                 {selectedLot && (
@@ -494,7 +497,7 @@ export default function App() {
                     className="bg-[#00E676] hover:bg-[#00C853] text-[#2D3339] font-bold text-xs py-3.5 px-6 border-2 border-[#2D3339] flex items-center justify-center gap-2 transition-all shadow-[3px_3px_0px_#2D3339] active:translate-y-0.5 active:shadow-[1px_1px_0px_#2D3339]"
                   >
                     <MessageSquare className="h-4.5 w-4.5 fill-current" />
-                    CHATEAR POR WHATSAPP AHORA
+                    CONVERSACIÓN PRIVADA
                   </a>
                 )}
               </div>

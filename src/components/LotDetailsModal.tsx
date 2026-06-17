@@ -29,9 +29,9 @@ export const LotDetailsModal: React.FC<LotDetailsProps> = ({ lot, onReserve }) =
         className="flex flex-col items-center justify-center p-8 text-center h-full border-2 border-dashed border-stone-300 rounded-none bg-stone-50 shadow-sm min-h-[580px]"
       >
         <Compass className="h-10 w-10 text-[#C4A484] mb-3 animate-spin" style={{ animationDuration: "14s" }} />
-        <h3 className="font-display font-bold text-[#2D3339] uppercase tracking-wider text-xl mt-3">Selecciona un lote</h3>
+        <h3 className="font-display font-bold text-[#2D3339] uppercase tracking-wider text-xl mt-3">Analiza el Emplazamiento</h3>
         <p className="text-sm text-stone-600 mt-2 max-w-[280px] leading-relaxed">
-          Haz clic en cualquier parcela del máster plan interactivo para inspeccionar sus características técnicas, elevación y calcular sus cuotas de financiamiento.
+          Haz clic en cualquier parcela del mapa para inspeccionar sus características técnicas, orientación y proyectar su estructura de inversión.
         </p>
       </motion.div>
     );
@@ -150,7 +150,7 @@ export const LotDetailsModal: React.FC<LotDetailsProps> = ({ lot, onReserve }) =
         <div className="border border-stone-200 bg-white rounded-none p-4 space-y-3.5">
           <div className="flex items-center justify-between border-b pb-3 border-stone-100">
             <h4 className="font-display text-sm font-bold uppercase tracking-wider text-[#2D3339] flex items-center gap-2">
-              <Landmark className="h-5 w-5 text-[#C4A484]" /> Simulador de Financiamiento
+              <Landmark className="h-5 w-5 text-[#C4A484]" /> Simulador de Estructura de Capital
             </h4>
             <span className="rounded-none bg-[#6B8E23] px-2 py-0.5 text-xs font-bold text-white uppercase tracking-widest">
               Sin Intereses
