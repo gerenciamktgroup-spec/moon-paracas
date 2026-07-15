@@ -10,13 +10,11 @@ interface Concept {
   vibe: string;
   gradient: string;
   icon: React.ReactNode;
-  imageUrl: string;
-  hotspots: { name: string; x: string; y: string; desc: string }[];
+  images: string[];
 }
 
 export const ConceptGallery: React.FC = () => {
   const [activeConceptIdx, setActiveConceptIdx] = useState<number>(0);
-  const [activeHotspot, setActiveHotspot] = useState<string | null>(null);
 
   const concepts: Concept[] = [
     {
@@ -33,11 +31,10 @@ export const ConceptGallery: React.FC = () => {
       vibe: "Xeripaisajismo y piedra natural",
       gradient: "from-amber-100 to-orange-100",
       icon: <Layers className="h-5 w-5 text-amber-800" />,
-      imageUrl: "/gemini_generated_image_g13l4tg13l4tg13l.jpg",
-      hotspots: [
-        { name: "Vigas de Eucalipto", x: "25%", y: "40%", desc: "Troncos rústicos tratados para alta durabilidad frente al clima desértico." },
-        { name: "Muros de Cantera", x: "75%", y: "65%", desc: "Piedra de la región apilada de forma artesanal respetando tonos áridos." },
-        { name: "Xeripaisajismo", x: "45%", y: "80%", desc: "Matorrales xerófitos autóctonos como cactus y agaves que requieren mínimo riego." }
+      images: [
+        "/media/concept_portico_1.jpeg",
+        "/media/concept_portico_2.jpeg",
+        "/media/concept_portico_3.jpeg"
       ]
     },
     {
@@ -54,11 +51,10 @@ export const ConceptGallery: React.FC = () => {
       vibe: "Elegancia natural en el desierto",
       gradient: "from-amber-50 to-emerald-50",
       icon: <Sun className="h-5 w-5 text-emerald-700" />,
-      imageUrl: "/gemini_generated_image_6ba4496ba4496ba4_1.jpg",
-      hotspots: [
-        { name: "Techo Solar", x: "50%", y: "25%", desc: "Puntos de anclaje listos para sistemas fotovoltaicos de autoconsumo." },
-        { name: "Cerco de Pirca", x: "80%", y: "70%", desc: "Muros bajos divisorios con piedra caliza dorada apilada a mano." },
-        { name: "Materiales Nobles", x: "30%", y: "82%", desc: "Revestimientos rústicos de madera tratada y barro texturizado." }
+      images: [
+        "/media/concept_villas_1.jpeg",
+        "/media/concept_villas_2.jpeg",
+        "/media/concept_villas_3.jpeg"
       ]
     },
     {
@@ -75,11 +71,10 @@ export const ConceptGallery: React.FC = () => {
       vibe: "Relajación absoluta bajo las estrellas",
       gradient: "from-blue-50 to-indigo-50",
       icon: <Moon className="h-5 w-5 text-indigo-700" />,
-      imageUrl: "/gemini_generated_image_6ba4496ba4496ba4.jpg",
-      hotspots: [
-        { name: "Piscina de Piedra", x: "40%", y: "55%", desc: "Acabados de piedra natural que brindan frescura y mimetismo con el oasis." },
-        { name: "Fogón Central", x: "70%", y: "75%", desc: "Anillo rústico para fogatas comunitarias bajo el cielo limpio de Ica." },
-        { name: "Decks de Madera", x: "20%", y: "45%", desc: "Terrazas de madera natural tratada para tomar sol y descansar." }
+      images: [
+        "/media/concept_oasis_1.jpeg",
+        "/media/concept_oasis_2.jpeg",
+        "/media/concept_oasis_3.jpeg"
       ]
     },
     {
@@ -96,10 +91,10 @@ export const ConceptGallery: React.FC = () => {
       vibe: "Sostenibilidad y vida orgánica",
       gradient: "from-amber-100 to-emerald-100",
       icon: <Trees className="h-5 w-5 text-amber-800" />,
-      imageUrl: "/gemini_generated_image_6ba4496ba4496ba4_2.jpg",
-      hotspots: [
-        { name: "Huerto Común", x: "65%", y: "30%", desc: "Zona compartida para prácticas de agricultura urbana orgánica en el desierto." },
-        { name: "Senderos Nativos", x: "35%", y: "72%", desc: "Caminos peatonales sombreados por huarangos y sauces de la zona." }
+      images: [
+        "/media/concept_xeri_1.jpeg",
+        "/media/concept_xeri_2.jpeg",
+        "/media/concept_xeri_3.jpeg"
       ]
     }
   ];
@@ -115,7 +110,7 @@ export const ConceptGallery: React.FC = () => {
           Concepto Arquitectónico
         </h2>
         <p className="text-base text-stone-600 mt-2 max-w-3xl">
-          Contraste desértico entre las dunas doradas, cantera de piedra rústica, xerofitismo de agaves y eco-tecnologías.
+          Explora los lineamientos visuales y materiales que definen el ecosistema premium de Moon Paracas.
         </p>
       </div>
 
@@ -124,10 +119,7 @@ export const ConceptGallery: React.FC = () => {
         {concepts.map((con, idx) => (
           <button
             key={con.id}
-            onClick={() => {
-              setActiveConceptIdx(idx);
-              setActiveHotspot(null);
-            }}
+            onClick={() => setActiveConceptIdx(idx)}
             className={`flex items-center gap-2 rounded-none px-4 py-2.5 text-sm font-bold border-2 transition-all ${
               activeConceptIdx === idx
                 ? "bg-[#2D3339] border-[#2D3339] text-white"
@@ -140,109 +132,67 @@ export const ConceptGallery: React.FC = () => {
         ))}
       </div>
 
-      {/* Main interactive visualization block */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
+      {/* Main visual & text block */}
+      <div className="space-y-8">
         
-        {/* Left Side: Illustrative Map Hotspot Viewer */}
-        <div className={`lg:col-span-6 rounded-none bg-gradient-to-br ${current.gradient} border-2 border-[#2D3339] p-6 flex flex-col justify-between relative overflow-hidden min-h-[360px] shadow-[4px_4px_0px_#2D3339]`}>
-          
-          {/* Subtle desert horizon curve background */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,#fff8dc_10%,transparent_70%)] opacity-30 pointer-events-none" />
-
-          <div className="flex justify-between items-start z-10">
-            <span className="rounded-none bg-[#2D3339] px-3 py-1.5 text-xs font-bold text-white uppercase tracking-wider">
-              Vista Esquematizada
-            </span>
-            <span className="text-xs text-stone-600 italic font-bold">{current.vibe}</span>
-          </div>
-
-          {/* Interactive hotspot map render simulation */}
-          <div className="relative w-full h-[280px] my-5 border-2 border-[#2D3339] rounded-none bg-stone-200 shadow-md">
-            
-            <img 
-              src={current.imageUrl} 
-              alt={current.title}
-              className="w-full h-full object-cover filter brightness-90 contrast-125"
-              referrerPolicy="no-referrer"
-            />
-            
-            {/* Dark overlay for better hotspot visibility */}
-            <div className="absolute inset-0 bg-black/10" />
-
-            {/* Hotspots layer clickable */}
-            {current.hotspots.map((hs, hidx) => {
-              const isOpen = activeHotspot === hs.name;
-              return (
-                <div
-                  key={`hs-${hidx}`}
-                  className="absolute"
-                  style={{ left: hs.x, top: hs.y }}
-                >
-                  <button
-                    onClick={() => setActiveHotspot(isOpen ? null : hs.name)}
-                    className={`h-8 w-8 rounded-none flex items-center justify-center font-bold text-sm border-2 border-[#2D3339] transition-all duration-300 ${
-                      isOpen
-                        ? "bg-[#C4A484] text-white scale-110"
-                        : "bg-[#2D3339] text-[#F4F4F1] hover:scale-110 animate-bounce"
-                    }`}
-                    title={hs.name}
-                  >
-                    <Navigation className="h-4 w-4 transform rotate-45" />
-                  </button>
-
-                  {/* Hotspot tooltip content */}
-                  {isOpen && (
-                    <div className="absolute top-10 left-1/2 -translate-x-1/2 bg-[#2D3339] text-white text-xs p-3.5 rounded-none shadow-lg border border-white/20 w-[220px] z-30 leading-snug">
-                      <p className="font-bold text-[#C4A484] uppercase tracking-wide">{hs.name}</p>
-                      <p className="mt-1 opacity-90">{hs.desc}</p>
-                    </div>
-                  )}
+        {/* Horizontal Scroll Gallery */}
+        <div className="relative w-full">
+          <div className="flex overflow-x-auto gap-4 pb-4 snap-x snap-mandatory hide-scrollbar">
+            {current.images.map((img, iIdx) => (
+              <div 
+                key={iIdx} 
+                className="flex-shrink-0 w-full sm:w-[80%] md:w-[60%] lg:w-[45%] snap-center rounded-none border-2 border-[#2D3339] overflow-hidden shadow-[4px_4px_0px_#2D3339] group"
+              >
+                <div className="aspect-[4/3] w-full relative">
+                  <img 
+                    src={img} 
+                    alt={`${current.title} - Toma ${iIdx + 1}`}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="absolute inset-0 bg-stone-900/10 group-hover:bg-transparent transition-colors duration-300" />
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
-
-          <p className="text-xs text-stone-700 text-center">
-            📌 Haz clic en los orientadores <Navigation className="inline h-3 w-3 rotate-45 text-[#C4A484]" /> para ver materiales y especificaciones de obra.
-          </p>
+          <div className="text-xs text-stone-500 font-bold uppercase tracking-widest flex items-center gap-2 mt-2">
+            <Navigation className="h-3 w-3 -rotate-90" />
+            Desliza para explorar la galería
+          </div>
         </div>
 
-        {/* Right Side: Specifications and criteria */}
-        <div className="lg:col-span-6 flex flex-col justify-between space-y-6">
-          <div className="space-y-3">
-            <span className="text-xs font-bold text-[#C4A484] uppercase tracking-widest">
+        {/* Text and Specifications */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start bg-gradient-to-br from-stone-50 to-stone-100 p-8 border-2 border-[#2D3339] shadow-[4px_4px_0px_#2D3339]">
+          
+          <div className="lg:col-span-7 flex flex-col space-y-4">
+            <span className="text-xs font-bold text-[#C4A484] uppercase tracking-widest bg-white border border-[#C4A484]/30 px-3 py-1 w-fit">
               {current.tagline}
             </span>
-            <h3 className="font-display text-3xl font-bold uppercase text-[#2D3339] leading-none">
+            <h3 className="font-display text-3xl font-bold uppercase text-[#2D3339] leading-tight">
               {current.title}
             </h3>
-            <p className="text-base text-stone-600 leading-relaxed">
+            <p className="text-base text-stone-600 leading-relaxed max-w-xl">
               {current.description}
             </p>
           </div>
 
           {/* Detailed requirements ticks */}
-          <div className="space-y-4 bg-stone-50 rounded-none p-6 border-2 border-[#2D3339] shadow-[2px_2px_0px_#2D3339]">
-            <h4 className="text-xs font-bold text-stone-500 uppercase tracking-widest border-b border-[#2D3339]/10 pb-2">
-              Requisitos Bioclimáticos de Obra
+          <div className="lg:col-span-5 space-y-4">
+            <h4 className="text-sm font-bold text-stone-800 uppercase tracking-widest border-b border-[#2D3339]/20 pb-2">
+              Características Clave
             </h4>
             
-            <div className="grid grid-cols-1 gap-3.5 text-sm text-[#2D3339] font-medium">
+            <div className="grid grid-cols-1 gap-3.5 text-sm text-stone-700 font-medium">
               {current.details.map((spec, sIdx) => (
                 <div key={`spec-${sIdx}`} className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-[#6B8E23] mt-0 flex-shrink-0" />
+                  <CheckCircle2 className="h-5 w-5 text-[#C4A484] mt-0 flex-shrink-0" />
                   <span className="leading-snug">{spec}</span>
                 </div>
               ))}
             </div>
           </div>
-
-          {/* Note about construction norms */}
-          <div className="p-4 border-l-4 border-[#C4A484] bg-stone-50 text-xs text-stone-600 leading-snug">
-            * Todas las viviendas deben adherirse al <strong>Reglamento de Construcción del Propietario (Anexo B)</strong>, el cual promueve fachadas con revestimientos terrosos y cubiertas transitables con sombreadores de eucalipto.
-          </div>
         </div>
-
+        
       </div>
     </div>
   );

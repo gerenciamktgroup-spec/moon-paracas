@@ -1,9 +1,11 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Lot, MasterplanScene } from "../../types/map";
-import { pathFromPolygon, centroid } from "../../lib/geometry";
+import { pathFromPolygon, centroid, getLotLayoutPoints } from "../../lib/geometry";
 import { LotsLayer } from "./layers/LotsLayer";
-import { APIProvider, Map as GoogleMap, MapCameraChangedEvent } from "@vis.gl/react-google-maps";
+import { APIProvider, Map as GoogleMap, MapCameraChangedEvent, useMap } from "@vis.gl/react-google-maps";
 import { CustomSVGOverlay } from "./CustomSVGOverlay";
+import { svgToLatLng } from "../../lib/geo";
+import { getMeterToSvgScale } from "../../lib/terrainModel";
 
 // Amenity fill colors
 const FILL_COLORS: Record<string, string> = {
@@ -40,12 +42,12 @@ const AMENITY_LABEL: Record<string, string> = {
   "pool":              "PISCINA OASIS",
   "clubhouse":         "CLUB MOON",
   "deck":              "DECK ZEN",
-  "firepit":           "FOG├ôN M├ìSTICO",
+  "firepit":           "FOGÓN MÍSTICO",
   "sand-plaza":        "OASIS",
   "entry-plaza":       "INGRESO",
   "moon-deck":         "MIRADOR",
   "parking":           "PARKING",
-  "xerophytic-garden": "JARD├ìN XER├ôFILO",
+  "xerophytic-garden": "JARDÍN XERÓFILO",
   "zen-labyrinth":     "LABERINTO",
   "palm-forest":       "BOSQUE",
   "yoga-plaza":        "YOGA",
@@ -55,7 +57,7 @@ const AMENITY_LABEL: Record<string, string> = {
   "gatehouse":         "CONTROL",
   "visitor-lobby":     "LOBBY VISITAS",
   "bus-bay":           "ZONA DE CARGA",
-  "gatehouse-roof":    "P├ôRTICO DE INGRESO",
+  "gatehouse-roof":    "PÓRTICO DE INGRESO",
 };
 
 const AMENITY_LABEL_OFFSET: Record<string, { dx: number, dy: number }> = {
@@ -76,6 +78,18 @@ const AMENITY_LABEL_OFFSET: Record<string, { dx: number, dy: number }> = {
 // Amenity kinds for which we suppress the text label
 const AMENITY_NO_LABEL = new Set(["sand-plaza", "bus-bay", "entry-plaza", "parking-driveway"]);
 
+const MapCenterController = ({ selectedLot }: { selectedLot: Lot | null }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (map && selectedLot && selectedLot.polygon && selectedLot.polygon.length > 0) {
+      const pt = centroid(selectedLot.polygon);
+      const ll = svgToLatLng(pt.x, pt.y);
+      map.panTo(ll);
+    }
+  }, [map, selectedLot]);
+  return null;
+};
+
 export function MapCanvas({
   scene, visibleLots, selectedLot, onSelectLot
 }: {
@@ -88,6 +102,7 @@ export function MapCanvas({
   const [warningsOpen, setWarningsOpen] = useState(false);
   
   const c = centroid(scene.innerBuffer);
+  const scale = getMeterToSvgScale();
 
   return (
     <div className="relative w-full h-full bg-transparent overflow-hidden touch-none select-none">
@@ -97,14 +112,14 @@ export function MapCanvas({
           onClick={() => setWarningsOpen(true)}
           className="absolute top-4 left-4 z-20 px-3 py-2 bg-white/90 backdrop-blur-md border border-[var(--color-desert-taupe)] hover:bg-[var(--color-desert-sand)] text-[var(--color-desert-charcoal)] font-bold text-[10px] tracking-widest uppercase shadow-md transition-all flex items-center gap-1.5 pointer-events-auto rounded-sm cursor-pointer"
         >
-          <span className="text-amber-600">ÔÜá´©Å</span>
+          <span className="text-amber-600">⚠</span>
           <span>Advertencias</span>
         </button>
       ) : (
         <div className="absolute top-4 left-4 z-20 max-w-[280px] sm:max-w-sm bg-white/95 backdrop-blur-md border border-[var(--color-desert-taupe)] border-l-4 border-l-amber-600 p-4 shadow-xl pointer-events-auto text-[11px] font-sans transition-all duration-300">
           <div className="flex items-center justify-between gap-2 mb-2 border-b border-amber-600/20 pb-1 text-amber-900 font-bold uppercase tracking-wider text-xs">
             <div className="flex items-center gap-2">
-              <span>ÔÜá´©Å</span> Advertencias Normativas
+              <span>⚠</span> Advertencias Normativas
             </div>
             <button
               onClick={() => setWarningsOpen(false)}
@@ -115,20 +130,20 @@ export function MapCanvas({
           </div>
           <ul className="space-y-2 text-stone-700">
             <li className="leading-relaxed">
-              <strong className="text-stone-900 block font-semibold">Ô£ª Acceso Principal Oficial:</strong>
-              Ubicaci├│n del ingreso y frente oficial es supuesta provisionalmente; sujeta a cambios de dise├▒o del eje vial externo.
+              <strong className="text-stone-900 block font-semibold">◆ Acceso Principal Oficial:</strong>
+              Ubicación del ingreso y frente oficial es supuesta provisionalmente; sujeta a cambios de diseño del eje vial externo.
             </li>
             <li className="leading-relaxed">
-              <strong className="text-stone-900 block font-semibold">Ô£ª Escorrent├¡a / Drenaje:</strong>
-              La direcci├│n de escorrent├¡a pluvial es preliminar y requiere estudio de pendientes e ingenier├¡a hidr├íulica definitiva.
+              <strong className="text-stone-900 block font-semibold">◆ Escorrentía / Drenaje:</strong>
+              La dirección de escorrentía pluvial es preliminar y requiere estudio de pendientes e ingeniería hidráulica definitiva.
             </li>
             <li className="leading-relaxed">
-              <strong className="text-stone-900 block font-semibold">Ô£ª Puntos de Servicios:</strong>
-              Los puntos de empalme el├®ctrico/agua son provisionales, pendientes de factibilidad final por empresas de servicios.
+              <strong className="text-stone-900 block font-semibold">◆ Puntos de Servicios:</strong>
+              Los puntos de empalme eléctrico/agua son provisionales, pendientes de factibilidad final por empresas de servicios.
             </li>
             <li className="leading-relaxed">
-              <strong className="text-stone-900 block font-semibold">Ô£ª Corredores Internos de 6m:</strong>
-              V├¡as internas de 6.0 m representadas como circulaci├│n compartida (Living Streets), sujetas a validaci├│n legal y municipal definitiva.
+              <strong className="text-stone-900 block font-semibold">◆ Corredores Internos de 6m:</strong>
+              Vías internas de 6.0 m representadas como circulación compartida (Living Streets), sujetas a validación legal y municipal definitiva.
             </li>
           </ul>
         </div>
@@ -140,11 +155,11 @@ export function MapCanvas({
         <div className="space-y-2.5">
           <div className="flex items-center gap-2">
             <div className="w-3.5 h-3.5 bg-[#748D70] border border-[#4A5D47] shadow-sm"></div>
-            <span className="font-medium text-stone-800">Lote Disponible (S/ 120 m┬▓)</span>
+            <span className="font-medium text-stone-800">Lote Disponible (S/ 120 m²)</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3.5 h-3.5 bg-[#8EA98A] border border-[#627B5E]"></div>
-            <span className="font-medium text-stone-800">Lote en Oferta (S/ 60 m┬▓)</span>
+            <span className="font-medium text-stone-800">Lote en Oferta (S/ 60 m²)</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3.5 h-3.5 bg-[#b0a898] border border-[#9b9383]"></div>
@@ -152,7 +167,7 @@ export function MapCanvas({
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3.5 h-3.5 bg-[#5c6065] border border-[#45484c]"></div>
-            <span>Cochera Visitas (P├║blico)</span>
+            <span>Cochera Visitas (Público)</span>
           </div>
           <div className="mt-3 pt-3 border-t border-stone-200 space-y-2">
             <div className="flex items-center gap-2">
@@ -172,6 +187,7 @@ export function MapCanvas({
       </div>
 
       <APIProvider apiKey={(import.meta as any).env.VITE_GOOGLE_MAPS_PLATFORM_KEY || ""}>
+        <MapCenterController selectedLot={selectedLot} />
         <GoogleMap
           defaultCenter={{ lat: -13.92385, lng: -76.16017 }}
           defaultZoom={17}
@@ -184,10 +200,45 @@ export function MapCanvas({
         <CustomSVGOverlay terrainSvgPoints={scene.terrain}>
             <svg ref={svgRef} viewBox="0 0 730 820" className="w-full h-full pointer-events-auto">
               <defs>
+                {/* Visual glow filter for pools, firepits, and club houses */}
+                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="1.6" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
                 
+                {/* 3D drop-shadow filter for roads and buildings */}
+                <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+                  <feDropShadow dx="0.4" dy="1.0" stdDeviation="0.8" floodColor="#000000" floodOpacity="0.4" />
+                </filter>
                 
+                {/* Water ripples pattern for Piscina Oasis */}
+                <pattern id="water-ripples" width="8" height="8" patternUnits="userSpaceOnUse">
+                  <path d="M 0 4 Q 2 2, 4 4 T 8 4" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="0.3" />
+                  <path d="M 0 8 Q 2 6, 4 8 T 8 8" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="0.3" />
+                </pattern>
                 
+                {/* Premium Palm Tree icon definition (centered at 0,0) */}
+                <g id="palm-icon">
+                  {/* Subtle ground shadow */}
+                  <circle cx="0.15" cy="0.3" r="1.1" fill="rgba(0,0,0,0.22)" />
+                  {/* Trunk base */}
+                  <circle cx="0" cy="0" r="0.35" fill="#5c4a37" />
+                  {/* Leaves radiating outward */}
+                  <path d="M 0 0 Q 0.7 -0.7, 1.2 -0.5" fill="none" stroke="#254a20" strokeWidth="0.35" strokeLinecap="round" />
+                  <path d="M 0 0 Q -0.7 -0.7, -1.2 -0.5" fill="none" stroke="#254a20" strokeWidth="0.35" strokeLinecap="round" />
+                  <path d="M 0 0 Q 0.6 0.6, 1.0 1.0" fill="none" stroke="#1d3b19" strokeWidth="0.35" strokeLinecap="round" />
+                  <path d="M 0 0 Q -0.6 0.6, -1.0 1.0" fill="none" stroke="#1d3b19" strokeWidth="0.35" strokeLinecap="round" />
+                  <path d="M 0 0 Q 0 -1.0, 0 -1.3" fill="none" stroke="#2e6328" strokeWidth="0.35" strokeLinecap="round" />
+                  <path d="M 0 0 Q 0 1.0, 0 1.3" fill="none" stroke="#2e6328" strokeWidth="0.35" strokeLinecap="round" />
+                </g>
                 
+                <radialGradient id="dome-3d" cx="35%" cy="35%" r="65%">
+                  <stop offset="0%"   stopColor="#FFFFFF" />
+                  <stop offset="35%"  stopColor="#FAF7F0" />
+                  <stop offset="70%"  stopColor="#EADEC9" />
+                  <stop offset="100%" stopColor="#C4B79A" />
+                </radialGradient>
+
                 <radialGradient id="terrain-grad" cx="45%" cy="40%" r="70%">
                   <stop offset="0%"   stopColor="#2A2F35" />
                   <stop offset="55%"  stopColor="#202428" />
@@ -227,7 +278,7 @@ export function MapCanvas({
                 return (
                   <g key={r.id}>
                     {isPrimary ? (
-                      <path d={d} fill="none" stroke="#8C6B4E" strokeWidth={16} strokeLinecap="round" strokeLinejoin="round" opacity={0.85} />
+                      <path d={d} fill="none" stroke="#8C6B4E" strokeWidth={16} strokeLinecap="round" strokeLinejoin="round" opacity={0.85} filter="url(#shadow)" />
                     ) : (
                       <g>
                         {/* Turnaround Oval (Cul-de-sac) at the start of dead-end streets */}
@@ -237,7 +288,7 @@ export function MapCanvas({
                             <circle cx={r.path[0].x} cy={r.path[0].y} r={3} fill="none" stroke="#e3ceb6" strokeWidth={1.5} opacity={0.5} strokeDasharray="2 4" />
                           </g>
                         )}
-                        <path d={d} fill="none" stroke="#c9a67f" strokeWidth={6.5} strokeLinecap="round" strokeLinejoin="round" opacity={0.65} />
+                        <path d={d} fill="none" stroke="#c9a67f" strokeWidth={6.5} strokeLinecap="round" strokeLinejoin="round" opacity={0.65} filter="url(#shadow)" />
                         <path d={d} fill="none" stroke="#5c4a37" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" opacity={0.75} strokeDasharray="2 4" />
                         <text x={(r.path[0].x + r.path[1].x) / 2} y={(r.path[0].y + r.path[1].y) / 2 + 1} textAnchor="middle" fontSize="4" fontWeight="bold" fill="#5c4a37" opacity={0.9} pointerEvents="none">
                           {r.widthM}m
@@ -260,8 +311,6 @@ export function MapCanvas({
               {scene.roads.map(r => {
                 const trees = [];
                 const isPrimary = r.kind === "primary";
-                const treeColor = isPrimary ? "#142018" : "#2D3C30";
-                const rSize = isPrimary ? 1.6 : 1.2;
                 const offset = isPrimary ? 7.5 : 3.5;
                 const spacing = isPrimary ? 9 : 12;
 
@@ -280,9 +329,21 @@ export function MapCanvas({
                        const perpX = -dy / dist;
                        const perpY = dx / dist;
                        // Left tree
-                       trees.push(<circle key={`tl-${j}-${i}`} cx={tx + perpX * offset} cy={ty + perpY * offset} r={rSize} fill={treeColor} stroke="#000" strokeWidth={0.3} opacity={0.9} />);
+                       trees.push(
+                         <use
+                           key={`tl-${j}-${i}`}
+                           href="#palm-icon"
+                           transform={`translate(${tx + perpX * offset}, ${ty + perpY * offset}) scale(${isPrimary ? 1.15 : 0.85})`}
+                         />
+                       );
                        // Right tree
-                       trees.push(<circle key={`tr-${j}-${i}`} cx={tx - perpX * offset} cy={ty - perpY * offset} r={rSize} fill={treeColor} stroke="#000" strokeWidth={0.3} opacity={0.9} />);
+                       trees.push(
+                         <use
+                           key={`tr-${j}-${i}`}
+                           href="#palm-icon"
+                           transform={`translate(${tx - perpX * offset}, ${ty - perpY * offset}) scale(${isPrimary ? 1.15 : 0.85})`}
+                         />
+                       );
                      }
                    }
                 }
@@ -350,6 +411,27 @@ export function MapCanvas({
                   );
                 }
 
+                // Entry Plaza Custom Rotonda Rendering
+                if (a.kind === "entry-plaza") {
+                  return (
+                    <g key={a.id}>
+                      {/* Main Paved Plaza (Rectangle) */}
+                      <path d={pathFromPolygon(a.polygon)} fill="#3a342c" stroke="#5c4a37" strokeWidth={1.5} opacity={0.95} />
+                      {/* Lane divider dashed lines (translucent cream) */}
+                      <path d={`M ${cPt.x - 3 * scale} ${cPt.y} L ${cPt.x + 3 * scale} ${cPt.y}`} fill="none" stroke="rgba(255, 255, 255, 0.4)" strokeWidth={1} strokeDasharray="3 3" />
+                      {/* Central landscaped island (oval) */}
+                      <ellipse cx={cPt.x} cy={cPt.y} rx={2.5 * scale} ry={5 * scale} fill="#708764" stroke="#4d5c45" strokeWidth={1.0} />
+                      {/* Center Palm tree indicator */}
+                      <use href="#palm-icon" transform={`translate(${cPt.x}, ${cPt.y}) scale(1.3)`} />
+                      {/* Radial agave/flower details inside the island */}
+                      <circle cx={cPt.x} cy={cPt.y - 3} r={0.7} fill="#d4a373" />
+                      <circle cx={cPt.x} cy={cPt.y + 3} r={0.7} fill="#d4a373" />
+                      <circle cx={cPt.x - 1.2} cy={cPt.y} r={0.6} fill="#d4a373" />
+                      <circle cx={cPt.x + 1.2} cy={cPt.y} r={0.6} fill="#d4a373" />
+                    </g>
+                  );
+                }
+
                 return (
                   <g key={a.id}>
                     <path
@@ -360,6 +442,15 @@ export function MapCanvas({
                       opacity={a.kind === "sand-plaza" ? 1 : 0.95}
                       filter={isGlowing ? "url(#glow)" : undefined}
                     />
+                    {a.kind === "pool" && (
+                      <path
+                        d={pathFromPolygon(a.polygon)}
+                        fill="url(#water-ripples)"
+                        stroke="none"
+                        opacity={0.85}
+                        pointerEvents="none"
+                      />
+                    )}
                     {!isSpot && !AMENITY_NO_LABEL.has(a.kind) && a.id !== "A_GATE_L" && a.id !== "A_GATE_R" && a.id !== "A_GATE_BAR" && (
                       <>
                         <text
@@ -388,7 +479,7 @@ export function MapCanvas({
                             pointerEvents="none"
                             style={{ textShadow: "0px 1px 2px rgba(0,0,0,0.8)" }}
                           >
-                            {a.areaM2} m┬▓
+                            {a.areaM2} m²
                           </text>
                         )}
                       </>
@@ -408,14 +499,23 @@ export function MapCanvas({
               {visibleLots.map(lot => {
                 if (!lot.polygon || lot.polygon.length < 3) return null;
                 if (lot.typology === "parking-external") return null;
-                const pt = centroid(lot.polygon);
-                const cx = pt.x;
-                const cy = pt.y;
+                
                 const isParking = lot.typology === "parking";
-                const hasPin = !isParking && (lot.status === "available" || lot.status === "offer");
-                const yOffset = isParking ? 0.4 : (hasPin ? 2.5 : 1.2);
+                let textX: number;
+                let textY: number;
+
+                if (isParking) {
+                  const pt = centroid(lot.polygon);
+                  textX = pt.x;
+                  textY = pt.y + 0.4;
+                } else {
+                  const layout = getLotLayoutPoints(lot.polygon);
+                  textX = layout.text.x;
+                  textY = layout.text.y;
+                }
+
                 return (
-                  <text key={`n-${lot.id}`} x={cx} y={cy + yOffset} textAnchor="middle"
+                  <text key={`n-${lot.id}`} x={textX} y={textY} textAnchor="middle"
                     fontSize={isParking ? "1.2" : "6.5"} fontWeight="700" fontFamily="var(--font-sans)"
                     fill="var(--color-desert-charcoal)" opacity={1.0} pointerEvents="none">
                     {isParking ? lot.number.toString().replace('P', '') : lot.number}

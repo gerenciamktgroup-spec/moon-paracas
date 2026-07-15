@@ -1,8 +1,12 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, getDocs, writeBatch, doc } from "firebase/firestore";
-import { buildBlocks } from './src/lib/blockModel';
-import { buildLots } from './src/lib/lotModel';
-import { buildTerrainScene } from './src/lib/terrainModel';
+import { buildTerrainScene, getMeterToSvgScale } from "./src/lib/terrainModel";
+import { buildBlocks } from "./src/lib/blockModel";
+import { buildLots, buildParkingLots } from "./src/lib/lotModel";
+import { buildAmenities } from "./src/lib/amenityModel";
+import { buildRoads } from "./src/lib/roadModel";
+import { roadToPolygon } from "./src/lib/geometry";
+import { checkCollision } from "./src/lib/spatialAnalyzer";
 import fs from "fs";
 
 const config = JSON.parse(fs.readFileSync("firebase-applet-config.json", "utf8"));
@@ -10,56 +14,121 @@ const app = initializeApp(config);
 const db = getFirestore(app, config.firestoreDatabaseId);
 
 async function run() {
-  const { innerBuffer } = buildTerrainScene();
-  const blocks = buildBlocks(innerBuffer);
-  const localLots = buildLots(blocks);
-  console.log(`Generated ${localLots.length} lots locally.`);
+  const terrainScene = buildTerrainScene();
+  const scale = getMeterToSvgScale();
+  const blocks = buildBlocks(terrainScene.innerBuffer);
+  const roads = buildRoads(terrainScene.innerBuffer);
+  const amenities = buildAmenities(terrainScene.innerBuffer);
+  
+  const roadPolys = roads.map(r => roadToPolygon(r.path, r.widthM, scale));
+  
+  const obstacles = [
+    ...blocks.map((b: any) => b.polygon),
+    ...amenities.map((a: any) => a.polygon),
+    ...roadPolys
+  ];
+  
+  const parkings = buildParkingLots(terrainScene.innerBuffer, obstacles, roadPolys);
+  
+  function circleToPolygon(center: any, radiusM: number, scale: number): any[] {
+    const poly: any[] = [];
+    const points = 12;
+    const r = radiusM * scale;
+    for (let i = 0; i < points; i++) {
+      const angle = (i * 2 * Math.PI) / points;
+      poly.push({
+        x: center.x + r * Math.cos(angle),
+        y: center.y + r * Math.sin(angle)
+      });
+    }
+    return poly;
+  }
+
+  const culDeSacs: any[][] = [];
+  roads.forEach(r => {
+    if (r.id.startsWith("LINEAR_ROAD")) {
+      culDeSacs.push(circleToPolygon(r.path[0], 6.0, scale));
+    }
+  });
+
+  const activeBuildings = [
+    ...amenities
+      .filter((a: any) => a.id !== "A_SAND" && a.kind !== "sand-plaza")
+      .map((a: any) => a.polygon),
+    ...culDeSacs,
+    ...parkings.map((p: any) => p.polygon),
+    ...roadPolys
+  ];
+  
+  const cleanLocalLots = buildLots(blocks, parkings, roadPolys, activeBuildings);
+  
+  const allLots = [...cleanLocalLots, ...parkings];
+  
+  console.log(`Generated ${cleanLocalLots.length} clean residential lots and ${parkings.length} parking spaces locally.`);
+  console.log(`Total items to upload: ${allLots.length}`);
 
   const lotsCol = collection(db, "lots");
   const snap = await getDocs(lotsCol);
   console.log(`Found ${snap.size} existing lots in Firestore.`);
 
   if (snap.size > 0) {
-    const deleteBatch1 = writeBatch(db);
-    const deleteBatch2 = writeBatch(db);
-    snap.docs.forEach((d, i) => {
-      if (i < 200) deleteBatch1.delete(d.ref);
-      else deleteBatch2.delete(d.ref);
-    });
-    await deleteBatch1.commit();
-    await deleteBatch2.commit();
+    // Delete in batches of 200 to be safe
+    let deleteBatch = writeBatch(db);
+    let count = 0;
+    for (const d of snap.docs) {
+      deleteBatch.delete(d.ref);
+      count++;
+      if (count % 200 === 0) {
+        await deleteBatch.commit();
+        deleteBatch = writeBatch(db);
+      }
+    }
+    if (count % 200 !== 0) {
+      await deleteBatch.commit();
+    }
     console.log("Deleted old lots from Firestore.");
   }
 
   // Upload in batches of 200
-  const batch1 = writeBatch(db);
-  const batch2 = writeBatch(db);
-  localLots.forEach((lot, i) => {
+  let uploadBatch = writeBatch(db);
+  let count = 0;
+  for (const lot of allLots) {
     const ref = doc(db, "lots", lot.id);
     const firestoreLot = {
-      ...lot,
-      // 15 fields required by local rules validation
       id: lot.id,
       number: lot.number,
-      area: lot.areaM2,
+      blockId: lot.blockId,
+      typology: lot.typology,
       status: lot.status,
+      areaM2: lot.areaM2,
+      polygon: lot.polygon,
+      dimensions: lot.dimensions || "",
+      priceLabel: lot.priceLabel || "",
       price: lot.price,
-      elevation: lot.elevation,
       quadrant: lot.quadrant,
-      x: 0,
-      y: 0,
-      width: 10,
-      height: 25,
-      row: 1,
-      hasSolarOpt: true,
+      area: lot.areaM2,
+      elevation: lot.elevation,
       distanceToPool: lot.distanceToPool,
-      rotation: 0
+      hubDistance: lot.hubDistance,
+      hasSolarOpt: true,
+      
+      frontage: lot.frontage || 0,
+      depth: lot.depth || 0,
+      price_soles: lot.price_soles || 0,
+      parking_type: lot.parking_type || "",
+      walk_distance_parking_meters: lot.walk_distance_parking_meters || 0,
+      walk_distance_oasis_meters: lot.walk_distance_oasis_meters || 0
     };
-    if (i < 200) batch1.set(ref, firestoreLot);
-    else batch2.set(ref, firestoreLot);
-  });
-  await batch1.commit();
-  await batch2.commit();
+    uploadBatch.set(ref, firestoreLot);
+    count++;
+    if (count % 200 === 0) {
+      await uploadBatch.commit();
+      uploadBatch = writeBatch(db);
+    }
+  }
+  if (count % 200 !== 0) {
+    await uploadBatch.commit();
+  }
   console.log("Seeded new lots successfully!");
 }
 

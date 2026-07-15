@@ -91,22 +91,47 @@ function runAudit() {
     ...roadPolygons
   ];
   
-  const houseLots = buildLots(blocks);
+  const parkingLots = buildParkingLots(innerBuffer, obstacles, roadPolygons);
+
+  function circleToPolygon(center: any, radiusM: number, scale: number): any[] {
+    const poly: any[] = [];
+    const points = 12;
+    const r = radiusM * scale;
+    for (let i = 0; i < points; i++) {
+      const angle = (i * 2 * Math.PI) / points;
+      poly.push({
+        x: center.x + r * Math.cos(angle),
+        y: center.y + r * Math.sin(angle)
+      });
+    }
+    return poly;
+  }
+
+  const culDeSacs: any[][] = [];
+  roads.forEach(r => {
+    if (r.id.startsWith("LINEAR_ROAD")) {
+      culDeSacs.push(circleToPolygon(r.path[0], 6.0, scale));
+    }
+  });
+
+  const activeBuildings = [
+    ...amenities
+      .filter((a: any) => a.id !== "A_SAND" && a.kind !== "sand-plaza")
+      .map((a: any) => a.polygon),
+    ...culDeSacs,
+    ...parkingLots.map((p: any) => p.polygon),
+    ...roadPolygons
+  ];
   
-  // Filter out lots that overlap with buildings (exclude sand-plaza/Oasis)
-  const activeBuildings = amenities
-    .filter(a => a.id !== "A_SAND" && a.kind !== "sand-plaza")
-    .map(a => a.polygon);
-  const cleanHouseLots = houseLots.filter(l => !checkCollision(l.polygon, activeBuildings, 0.1));
+  const cleanHouseLots = buildLots(blocks, parkingLots, roadPolygons, activeBuildings);
   
-  const parkingLots = buildParkingLots(innerBuffer, obstacles);
   const allLots = [...cleanHouseLots, ...parkingLots];
 
   console.log(`Loaded:`);
   console.log(`- Blocks: ${blocks.length}`);
   console.log(`- Roads: ${roads.length}`);
   console.log(`- Amenities: ${amenities.length}`);
-  console.log(`- House Lots: ${houseLots.length}`);
+  console.log(`- House Lots: ${cleanHouseLots.length}`);
   console.log(`- Parking Lots: ${parkingLots.length}`);
   console.log(`- Total Lots: ${allLots.length}`);
 
@@ -156,6 +181,9 @@ function runAudit() {
   // 2. Check Amenities vs Roads
   console.log("Checking Amenities vs Roads...");
   for (const a of amenities) {
+    if (["A_ROTONDA", "A_BUS_STOP", "A_GATE_L", "A_GATE_R", "A_GATE_MEDIAN", "A_GATE_ROOF", "A_GATE_BAR"].includes(a.id)) {
+      continue; // Expected architectural integrations
+    }
     for (const r of roadPolys) {
       verifyOverlap(a.polygon, `Amenity:${a.id} (${a.kind})`, r.polygon, `Road:${r.id}`);
     }

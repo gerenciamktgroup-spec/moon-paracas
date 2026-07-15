@@ -23,7 +23,7 @@ export type TerrainModel = {
   edges: TerrainEdge[];
 };
 
-export type LotStatus = "available" | "offer" | "sold" | "blocked";
+export type LotStatus = "available" | "offer" | "sold" | "blocked" | "reserved";
 export type LotTypology = "standard" | "premium" | "adjustment" | "zen" | "tiny-house" | "parking" | "parking-external";
 
 export type BlockRole =
@@ -94,17 +94,21 @@ export type BlockPolygon = {
     t_start_high?: number;
     isFirstRow?: boolean;
   };
+  vehiclesAllowed?: boolean;
 };
 
 export type Lot = {
   id: string;
   blockId: string;
+  projectId?: "moon-paracas" | "paracas-dome";
   typology: LotTypology;
   status: LotStatus;
   areaM2: number;
   polygon: XY[];
   dimensions?: string;
   priceLabel?: string;
+  availableOffers?: string[];
+  defaultOfferId?: string;
   
   // Legacy compatibility for UI
   price: number;
@@ -114,6 +118,14 @@ export type Lot = {
   elevation: number;
   distanceToPool: number;
   hubDistance: number;
+
+  // Custom metadata fields
+  frontage?: number;
+  depth?: number;
+  price_soles?: number;
+  parking_type?: string;
+  walk_distance_parking_meters?: number;
+  walk_distance_oasis_meters?: number;
 };
 
 export type SalesFilters = {

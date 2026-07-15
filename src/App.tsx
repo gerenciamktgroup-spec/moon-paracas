@@ -1,24 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { Lot } from "./types/map";
 import { Header } from "./components/Header";
-import MoonParacasMap from "./components/map/MoonParacasMap";
-import { LotDetailsModal } from "./components/LotDetailsModal";
-import { ConceptGallery } from "./components/ConceptGallery";
-import { LifestyleAmenities } from "./components/LifestyleAmenities";
-import { EngineeringSpecs } from "./components/EngineeringSpecs";
-import { ContractsSignature } from "./components/ContractsSignature";
-
-import { ExperienceAnchor } from "./components/ExperienceAnchor";
-import { TechnicalLegacy } from "./components/TechnicalLegacy";
-import { ObjectionsBridge } from "./components/ObjectionsBridge";
-
-import { ParacasHistory } from "./components/ParacasHistory";
-import { ArchitecturalRecommendations } from "./components/ArchitecturalRecommendations";
-import { ShieldCheck, Trees, Phone, Mail, Map, Compass, HardHat, MessageSquare, Sparkles, Lock, BookOpen, Home } from "lucide-react";
+import { Footer } from "./components/Footer";
+import { ShieldCheck, Calculator } from "lucide-react";
+import { StardustEffect } from "./components/StardustEffect";
 import { auth, db } from "./firebase";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { collection, onSnapshot, doc, writeBatch, updateDoc, getDocs } from "firebase/firestore";
-import { motion, AnimatePresence } from "motion/react";
+import { collection, onSnapshot, doc, writeBatch, updateDoc, getDocs, addDoc } from "firebase/firestore";
 
 // Model imports
 import { buildTerrainScene, getMeterToSvgScale } from "./lib/terrainModel";
@@ -28,524 +17,488 @@ import { buildAmenities } from "./lib/amenityModel";
 import { buildRoads } from "./lib/roadModel";
 import { roadToPolygon } from "./lib/geometry";
 import { checkCollision } from "./lib/spatialAnalyzer";
+import { buildDomeScene } from "./lib/domeModel";
+
+// Pages
+import { Home } from "./pages/Home";
+import { Simulator } from "./pages/Simulator";
+import { Technical } from "./pages/Technical";
+import { Experience } from "./pages/Experience";
+import { Gallery } from "./pages/Gallery";
+import { ParacasDome } from "./pages/ParacasDome";
+import { ParacasDomeAdmin } from "./pages/ParacasDomeAdmin";
+import { Comisiones } from "./pages/Comisiones";
+
+// Auth Screen placeholder for Admin path
+import { AuthScreen } from "./components/AuthScreen";
+
+// Scroll to top helper
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [pathname]);
+  return null;
+};
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Moon Paracas Lot state
   const [lots, setLots] = useState<Lot[]>([]);
   const [selectedLot, setSelectedLot] = useState<Lot | null>(null);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
   
-  // Navigation tabs state
-  const [activeTab, setActiveTab] = useState<"masterplan" | "concept" | "lifestyle" | "engineering" | "signature" | "history" | "architecture">("masterplan");
+  // Paracas Dome Lot state
+  const [domeLots, setDomeLots] = useState<Lot[]>([]);
+  const [selectedDomeLot, setSelectedDomeLot] = useState<Lot | null>(null);
+  
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Contact form state
-  const [contactName, setContactName] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
-  const [contactPhone, setContactPhone] = useState("");
-  const [contactMessage, setContactMessage] = useState("");
-  const [formSubmitted, setFormSubmitted] = useState(false);
+  // Background atmospheres videos state for Home Page
+  const [activeVideoIdx, setActiveVideoIdx] = useState(1); // default index 1: Vuelo Estelar HD
+  const [isBgPaused, setIsBgPaused] = useState(false);
+  const bgVideoRef = useRef<HTMLVideoElement>(null);
 
-  // Authentication check
+  const videos = [
+    { id: "celestial_fast", src: "/media/water_mirror.mp4", label: "Noche Estelar" },
+    { id: "celestial_hi", src: "/media/hero_bg.mp4", label: "Vuelo Estelar HD" },
+    { id: "oasis", src: "/media/pool_pan.mp4", label: "El Oasis Central" },
+    { id: "domos", src: "/media/Desert_geodesic_domes_at_sunset_202606230037.mp4", label: "Eco-Domos Sunset" },
+    { id: "suite", src: "/media/sunrise_bed.mp4", label: "Suite Estelar" },
+    { id: "fogon", src: "/media/firepit.mp4", label: "Fogón Místico" }
+  ];
+
+  // Auth check
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      // We no longer block loading since it's a public web
       setLoading(false);
     });
     return () => unsubscribe();
   }, []);
 
-  // Initialize and sync lots with Firestore
+  // Sync and seed Moon Paracas lots
   useEffect(() => {
     let isMounted = true;
     const lotsCol = collection(db, "lots");
 
-    // ── PASO 1: Carga INMEDIATA desde el generador local ──────────────────
+    // 1. Local generation for instant UI responsiveness
     const terrainScene = buildTerrainScene();
     const scale = getMeterToSvgScale();
     const blocks = buildBlocks(terrainScene.innerBuffer);
     const roads = buildRoads(terrainScene.innerBuffer);
     const amenities = buildAmenities(terrainScene.innerBuffer);
-    
-    // Convert roads to polygons for collision detection
     const roadPolys = roads.map(r => roadToPolygon(r.path, r.widthM, scale));
     
-    const obstacles = [
-      ...blocks.map((b: any) => b.polygon),
-      ...amenities.map((a: any) => a.polygon),
+    // Cul de sacs
+    function circleToPolygon(center: { x: number; y: number }, radiusM: number, scale: number): any[] {
+      const poly: any[] = [];
+      const points = 12;
+      const r = radiusM * scale;
+      for (let i = 0; i < points; i++) {
+        const angle = (i * 2 * Math.PI) / points;
+        poly.push({
+          x: center.x + r * Math.cos(angle),
+          y: center.y + r * Math.sin(angle)
+        });
+      }
+      return poly;
+    }
+    const culDeSacs: any[][] = [];
+    roads.forEach(r => {
+      if (r.id.startsWith("LINEAR_ROAD")) {
+        culDeSacs.push(circleToPolygon(r.path[0], 6.0, scale));
+      }
+    });
+
+    const activeBuildings = [
+      ...amenities
+        .filter((a: any) => a.id !== "A_SAND" && a.kind !== "sand-plaza")
+        .map((a: any) => a.polygon),
+      ...culDeSacs,
       ...roadPolys
     ];
     
-    // Build parking lots, avoiding blocks, amenities, and roads
-    const parkings = buildParkingLots(terrainScene.innerBuffer, obstacles);
-    const localLots = buildLots(blocks, parkings);
-    
-    // Filter out lots that overlap with buildings (exclude sand-plaza/Oasis)
-    const activeBuildings = amenities
-      .filter((a: any) => a.id !== "A_SAND" && a.kind !== "sand-plaza")
-      .map((a: any) => a.polygon);
-    const cleanLocalLots = localLots.filter(l => !checkCollision(l.polygon, activeBuildings, 0.1));
-    
+    const parkings = buildParkingLots(terrainScene.innerBuffer, activeBuildings);
+    const cleanLocalLots = buildLots(blocks, parkings, roadPolys, activeBuildings);
     const allLots = [...cleanLocalLots, ...parkings];
-    
-    setLots(allLots);
-    setSelectedLot(allLots[0]);
 
-    // Firebase sync bg
+    if (isMounted) {
+      setLots(allLots);
+      setSelectedLot(allLots[0]);
+    }
+
+    // 2. Firebase seeding & real-time sync
     getDocs(lotsCol).then(async (snap) => {
       try {
-        const hasSeeded = localStorage.getItem("seeded-moon-v30");
-
+        const hasSeeded = localStorage.getItem("seeded-moon-v36");
         if (!hasSeeded || snap.empty || snap.docs.length < 100) {
-          console.log("Re-seeding Firebase with Moon Paracas terrain lots...");
           const deleteBatch = writeBatch(db);
           snap.docs.forEach(d => deleteBatch.delete(d.ref));
           await deleteBatch.commit();
 
           const batch1 = writeBatch(db);
           const batch2 = writeBatch(db);
+          const batch3 = writeBatch(db);
+          
           allLots.forEach((lot, i) => {
             const ref = doc(db, "lots", lot.id);
-            if (i < 250) batch1.set(ref, lot);
-            else batch2.set(ref, lot);
+            if (i < 150) batch1.set(ref, lot);
+            else if (i < 300) batch2.set(ref, lot);
+            else batch3.set(ref, lot);
           });
           await batch1.commit();
           await batch2.commit();
-          localStorage.setItem("seeded-moon-v30", "true");
-          console.log("✅ Firebase seeded with", allLots.length, "lots.");
+          await batch3.commit();
+          localStorage.setItem("seeded-moon-v36", "true");
+          console.log("Firebase seeded successfully with Moon Paracas lots");
         } else {
           const dbLots = snap.docs.map(d => d.data() as Lot);
           if (isMounted && dbLots.length > 0) {
             setLots(dbLots);
-            setSelectedLot(prev => {
-              const updated = dbLots.find(l => l.id === prev?.id);
-              return updated ?? dbLots[0];
-            });
+            setSelectedLot(prev => dbLots.find(l => l.id === prev?.id) || dbLots[0]);
           }
         }
-      } catch (err) {}
-    }).catch(() => {});
+      } catch (err) {
+        console.error("Error seeding Moon Paracas:", err);
+      }
+    }).catch(console.error);
 
-    // ── PASO 3: Escuchar cambios en tiempo real (reservas, estados) ───────
     const unsubscribe = onSnapshot(lotsCol, (snapshot) => {
       const dbLots = snapshot.docs.map(d => d.data() as Lot);
       if (isMounted && dbLots.length > 50) {
-        // Sólo reemplazamos si Firebase tiene suficientes lotes
         setLots(dbLots);
-        setSelectedLot(prev => {
-          const updated = dbLots.find(l => l.id === prev?.id);
-          return updated ?? dbLots[0];
-        });
+        setSelectedLot(prev => dbLots.find(l => l.id === prev?.id) || dbLots[0]);
       }
-    }, (error) => {
-      console.warn("Firestore listener error:", error.message);
     });
 
     return () => {
       isMounted = false;
       unsubscribe();
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Update lot status when user clicks "Reservar" (Firestore sync)
-  const handleReserveLot = async (lotId: string) => {
+  // Sync and seed Paracas Dome lots
+  useEffect(() => {
+    let isMounted = true;
+    const domeLotsCol = collection(db, "dome_lots");
+
+    // 1. Build Dome lots locally
+    const domeScene = buildDomeScene();
+    if (isMounted) {
+      setDomeLots(domeScene.lots);
+      setSelectedDomeLot(domeScene.lots[0]);
+    }
+
+    // 2. Firebase seeding & real-time sync
+    getDocs(domeLotsCol).then(async (snap) => {
+      try {
+        const hasSeeded = localStorage.getItem("seeded-dome-v3");
+        if (!hasSeeded || snap.empty || snap.docs.length < 30) {
+          const deleteBatch = writeBatch(db);
+          snap.docs.forEach(d => deleteBatch.delete(d.ref));
+          await deleteBatch.commit();
+
+          const batch = writeBatch(db);
+          domeScene.lots.forEach((lot) => {
+            const ref = doc(db, "dome_lots", lot.id);
+            batch.set(ref, lot);
+          });
+          await batch.commit();
+          localStorage.setItem("seeded-dome-v3", "true");
+          console.log("Firebase seeded successfully with Paracas Dome lots");
+        } else {
+          const dbLots = snap.docs.map(d => d.data() as Lot);
+          if (isMounted && dbLots.length > 0) {
+            setDomeLots(dbLots);
+            setSelectedDomeLot(prev => dbLots.find(l => l.id === prev?.id) || dbLots[0]);
+          }
+        }
+      } catch (err) {
+        console.error("Error seeding Dome Lots:", err);
+      }
+    }).catch(console.error);
+
+    const unsubscribe = onSnapshot(domeLotsCol, (snapshot) => {
+      const dbLots = snapshot.docs.map(d => d.data() as Lot);
+      if (isMounted && dbLots.length > 10) {
+        setDomeLots(dbLots);
+        setSelectedDomeLot(prev => dbLots.find(l => l.id === prev?.id) || dbLots[0]);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, []);
+
+  // MercadoPago Checkout / Reservation handler
+  const handleReserveLot = async (
+    lotId: string, 
+    clientData?: { 
+      name: string; 
+      dni: string; 
+      email: string; 
+      phone: string;
+      monthlyAmount: number;
+      installmentsCount: number;
+      isCash: boolean;
+      offerId?: string;
+      offerName?: string;
+      totalPrice?: number;
+      addOnsTotal?: number;
+      addOnIds?: string[];
+      downPaymentPercent?: number;
+    }
+  ) => {
     try {
-      const lotRef = doc(db, "lots", lotId);
-      await updateDoc(lotRef, {
-        status: "offer"
+      if (!clientData) {
+        // Direct pre-reservation block
+        const isDome = lotId.startsWith("D-");
+        const lotRef = doc(db, isDome ? "dome_lots" : "lots", lotId);
+        await updateDoc(lotRef, { status: "offer" });
+        setToastMessage(`¡Éxito! El lote ${lotId} ha sido bloqueado provisionalmente.`);
+        setTimeout(() => setToastMessage(null), 5000);
+        return;
+      }
+
+      // Real MP Payment integration
+      const reservationId = "RES-" + Math.random().toString(36).substr(2, 9).toUpperCase();
+
+      // Create modal container
+      const overlay = document.createElement("div");
+      overlay.id = "mp-payment-overlay";
+      overlay.className = "fixed inset-0 z-[9999] flex items-center justify-center bg-[#0A0807]/90 backdrop-blur-md p-4";
+      
+      const container = document.createElement("div");
+      container.className = "w-full max-w-md bg-[#16110F] border border-[#F5F2EB]/15 p-6 rounded-2xl shadow-2xl relative font-sans text-center text-[#F5F2EB]";
+      
+      const title = document.createElement("h3");
+      title.className = "font-display text-2xl font-bold text-white mb-2 uppercase tracking-wider";
+      title.innerText = "Garantía de Reserva";
+      
+      const desc = document.createElement("p");
+      desc.className = "text-xs text-stone-400 mb-6 leading-relaxed";
+      desc.innerText = `Paga S/ 1,000 de forma segura para reservar el lote ${lotId.replace("D-", "Dome ").replace("LOTE-", "")}`;
+      
+      const closeBtn = document.createElement("button");
+      closeBtn.className = "absolute top-4 right-4 text-stone-500 hover:text-white cursor-pointer text-xl font-bold transition-colors";
+      closeBtn.innerHTML = "&times;";
+      closeBtn.onclick = () => {
+        overlay.remove();
+      };
+      
+      const brickDiv = document.createElement("div");
+      brickDiv.id = "paymentCardBrick_container";
+      
+      container.appendChild(closeBtn);
+      container.appendChild(title);
+      container.appendChild(desc);
+      container.appendChild(brickDiv);
+      overlay.appendChild(container);
+      document.body.appendChild(overlay);
+
+      // Initialize MercadoPago
+      // @ts-ignore
+      const mp = new window.MercadoPago("APP_USR-efc7d7c6-7a9b-432d-8b0f-870bfb0fefb8"); // sandbox public key
+      const bricksBuilder = mp.bricks();
+      
+      await bricksBuilder.create("cardPayment", "paymentCardBrick_container", {
+        initialization: {
+          amount: 1000,
+          payer: {
+            email: clientData.email,
+          },
+        },
+        customization: {
+          visual: {
+            style: {
+              theme: "dark",
+            },
+          },
+        },
+        callbacks: {
+          onReady: () => {
+            console.log("Card Brick ready");
+          },
+          onSubmit: async (formData: any) => {
+            try {
+              if (formData.payer) {
+                formData.payer.first_name = clientData.name.split(" ")[0];
+                formData.payer.last_name = clientData.name.split(" ").slice(1).join(" ") || clientData.name;
+                formData.payer.email = clientData.email;
+                if (!formData.payer.identification) {
+                  formData.payer.identification = {};
+                }
+                formData.payer.identification.type = "DNI";
+                formData.payer.identification.number = clientData.dni;
+              }
+
+              const payResponse = await fetch("/api/process-payment", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-Idempotency-Key": reservationId },
+                body: JSON.stringify({
+                  paymentData: formData,
+                  reservationId,
+                  lotId,
+                  clientName: clientData.name
+                })
+              });
+              
+              const payData = await payResponse.json();
+              
+              if (payData.status === "approved") {
+                overlay.remove();
+                
+                // Update Firestore
+                const isDome = lotId.startsWith("D-");
+                const lotRef = doc(db, isDome ? "dome_lots" : "lots", lotId);
+                await updateDoc(lotRef, { status: "reserved" });
+                
+                // Save Reservation log
+                await addDoc(collection(db, "reservations"), {
+                  lotId,
+                  proyecto: isDome ? "Paracas Dome" : "Moon Paracas",
+                  clienteName: clientData.name,
+                  montoSeparacion: 1000,
+                  fecha: new Date().toISOString(),
+                  status: "paid",
+                  originalEstado: "Disponible",
+                  clientDni: clientData.dni,
+                  clientEmail: clientData.email,
+                  clientPhone: clientData.phone,
+                  monthlyAmount: clientData.monthlyAmount,
+                  installmentsCount: clientData.installmentsCount,
+                  isCash: clientData.isCash,
+                  offerId: clientData.offerId || "",
+                  offerName: clientData.offerName || "",
+                  totalPrice: clientData.totalPrice || 0,
+                  addOnsTotal: clientData.addOnsTotal || 0,
+                  addOnIds: clientData.addOnIds || [],
+                  downPaymentPercent: clientData.downPaymentPercent || 0,
+                  mpPaymentId: payData.id
+                });
+                
+                const lotLabel = isDome ? lotId.replace("D-", "Dome ") : lotId.replace("LOTE-", "");
+                setToastMessage(`✅ ¡Reserva Exitosa! El Lote ${lotLabel} ha sido adjudicado.`);
+                setTimeout(() => setToastMessage(null), 8000);
+              } else {
+                throw new Error(payData.status_detail || "Pago rechazado. Intenta con otra tarjeta.");
+              }
+            } catch (err: any) {
+              console.error("Payment error:", err);
+              alert("Error de pago: " + (err.message || err));
+            }
+          },
+          onError: (error: any) => {
+            console.error("Card Brick error:", error);
+          }
+        }
       });
-      setToastMessage(`¡Éxito! El lote ${lotId.split("-")[1]} ha sido pre-reservado con S/ 1,000 en garantía.`);
-      setTimeout(() => {
-        setToastMessage(null);
-      }, 5500);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      setToastMessage("Error al reservar el lote. Intenta nuevamente.");
-      setTimeout(() => setToastMessage(null), 3500);
+      setToastMessage(e.message || "Error al inicializar la pasarela de reservas.");
+      setTimeout(() => setToastMessage(null), 5000);
     }
   };
 
-  // Helper metrics for overall dashboard counters
-  const residentialLots = lots.filter(l => l.blockId !== "PARKING");
-  const parkingLots = lots.filter(l => l.blockId === "PARKING");
-  
-  const libresCount = residentialLots.filter(l => l.status === "available" || l.status === "offer").length;
-  const reservadosCount = residentialLots.filter(l => l.status === "reserved").length;
-  const vendidosCount = residentialLots.filter(l => l.status === "sold").length;
-  const cocherasCount = parkingLots.length;
-
   return (
-    <>
-      <div className="min-h-[100dvh] bg-[#F4F4F1] font-sans selection:bg-[#C4A484] selection:text-[#2D3339] pb-16">
+    <BrowserRouter>
+      <ScrollToTop />
+      <div className="min-h-[100dvh] font-sans selection:bg-[#D95D39] selection:text-white flex flex-col relative overflow-hidden bg-[#0A0807]">
         
-        {/* Premium Header */}
-        <Header />
-
-      {/* Main Container Wrapper */}
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 py-6 space-y-8">
-        
-        {/* Toast Notification */}
-        {toastMessage && (
-          <div className="fixed bottom-5 right-5 z-50 rounded-none bg-stone-900 px-5 py-4 text-sm text-white shadow-[4px_4px_0px_#C4A484] border-2 border-[#C4A484] flex items-center gap-3">
-            <ShieldCheck className="h-5 w-5 text-[#C4A484]" />
-            <span className="font-bold tracking-wide">{toastMessage}</span>
-          </div>
-        )}
-
-        {/* Modern Luxury Hero Banner */}
-        <div className="relative rounded-3xl overflow-hidden min-h-[350px] sm:min-h-[400px] flex items-end shadow-2xl group mb-8 border border-stone-200/50">
-          {/* Background image - fully visible */}
-          <div 
-            className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat transition-transform duration-1000 group-hover:scale-105"
-            style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1509316785289-025f5b846b35?q=80&w=2600&auto=format&fit=crop")' }}
+        {/* Global Dynamic Background Video Layer */}
+        <div className="fixed inset-0 w-full h-full z-0 overflow-hidden pointer-events-none">
+          <video
+            ref={bgVideoRef}
+            key={activeVideoIdx}
+            src={videos[activeVideoIdx].src}
+            className="absolute inset-0 w-full h-full object-cover opacity-[0.32] transition-opacity duration-700"
+            autoPlay={!isBgPaused}
+            loop
+            muted
+            playsInline
           />
-          {/* Elegant gradient overlay - dark at bottom for text readability, fully transparent at top */}
-          <div className="absolute inset-0 bg-gradient-to-t from-stone-950 via-stone-900/60 to-transparent z-0" />
-          
-          <motion.div 
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="relative z-10 w-full p-6 sm:p-12 lg:p-16 flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8"
-          >
-            {/* Title Section */}
-            <div className="max-w-3xl space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#C4A484]/20 backdrop-blur-md border border-[#C4A484]/50 px-4 py-1.5 text-xs font-bold text-[#F4F4F1] uppercase tracking-widest shadow-lg">
-                <Sparkles className="h-4 w-4" /> Etapa Fundadora
-              </div>
-              
-              <h2 className="font-display text-5xl sm:text-6xl lg:text-7xl font-bold text-white tracking-tighter leading-[1.05] uppercase drop-shadow-md">
-                Moon Paracas. <br />
-                <span className="text-[#C4A484] font-light">Refugio en el oasis.</span>
-              </h2>
-            </div>
-
-            {/* Glassmorphism Info Card */}
-            <div className="max-w-md bg-stone-900/30 backdrop-blur-md border border-white/10 p-6 sm:p-8 rounded-2xl shadow-2xl">
-              <p className="text-sm sm:text-base text-stone-200 leading-relaxed mb-6 font-light">
-                Un eco-condominio diseñado para la desconexión total sobre el tablazo de Paracas. <strong className="text-white font-medium">Arquitectura sostenible de adobe y terracota, cero contaminación vehicular, y seguridad absoluta.</strong>
-              </p>
-              
-              <button 
-                onClick={() => setActiveTab("masterplan")}
-                className="group flex items-center justify-between w-full bg-white hover:bg-[#C4A484] text-stone-900 px-6 py-3.5 rounded-full font-bold text-xs sm:text-sm uppercase tracking-widest transition-all duration-300 shadow-md"
-              >
-                <span>Descubrir Masterplan</span>
-                <Map className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </button>
-            </div>
-          </motion.div>
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0A0807] via-transparent to-[#0A0807] opacity-90 z-0" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#3A2E26]/30 via-[#0A0807]/75 to-[#0A0807] opacity-95 z-0" />
         </div>
 
-        {/* Quick numbers tracker bar (Marketing style) */}
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 mt-8 pb-4 text-center">
-          <div className="bg-white border-4 border-[#2D3339] p-4 shadow-[4px_4px_0px_#A3B18A]">
-            <p className="text-xs font-bold text-[#A3B18A] uppercase tracking-widest mb-1.5">Disponibilidad Fase 1</p>
-            <p className="font-display font-black text-[#A3B18A] text-2xl sm:text-3xl">{libresCount}</p>
-          </div>
-          <div className="bg-white border-4 border-[#2D3339] p-4 shadow-[4px_4px_0px_#F57C00]">
-            <p className="text-xs font-bold text-[#F57C00] uppercase tracking-widest mb-1.5">Lotes Asignados</p>
-            <p className="font-display font-black text-[#F57C00] text-2xl sm:text-3xl">{reservadosCount}</p>
-          </div>
-          <div className="bg-white border-4 border-[#2D3339] p-4 shadow-[4px_4px_0px_#D32F2F]">
-            <p className="text-xs font-bold text-[#D32F2F] uppercase tracking-widest mb-1.5">Lotes Patrimonio Consolidado</p>
-            <p className="font-display font-black text-[#D32F2F] text-2xl sm:text-3xl">{vendidosCount}</p>
-          </div>
-          <div className="bg-white border-4 border-[#2D3339] p-4 shadow-[4px_4px_0px_#9E9E9E]">
-            <p className="text-xs font-bold text-stone-500 uppercase tracking-widest mb-1.5">Cocheras Totales</p>
-            <p className="font-display font-black text-stone-500 text-2xl sm:text-3xl">{cocherasCount}</p>
-          </div>
-        </div>
+        {/* Interactive Stardust Cursor Trail */}
+        <StardustEffect />
 
+        <div className="relative z-10 flex flex-col min-h-screen">
+          <Header />
 
-
-        
-        {/* =========================================
-            LONG-SCROLL STORYTELLING CONTENT 
-            ========================================= */}
-        <div className="flex flex-col space-y-32 mt-16">
-          
-          
-          {/* 1. LEGITIMIDAD Y EXPERIENCIA (NUEVO) */}
-          <ExperienceAnchor />
-          <TechnicalLegacy />
-
-          {/* 2. HISTORIA & CONCEPTO */}
-          <section id="history" className="scroll-mt-24 space-y-24">
-            <div className="text-center mt-12 mb-[-4rem]">
-               <span className="font-mono text-[10px] uppercase tracking-widest text-[#C4A484] border border-[#C4A484] px-3 py-1 rounded-full">
-                 La suma de este aprendizaje se refleja en
-               </span>
+          {/* Toast Notification */}
+          {toastMessage && (
+            <div className="fixed bottom-5 right-5 z-50 rounded-xl bg-stone-900 px-5 py-4 text-sm text-white border border-[#F5F2EB]/15 flex items-center gap-3 shadow-2xl animate-fade-in">
+              <ShieldCheck className="h-5 w-5 text-[#D95D39]" />
+              <span className="font-bold tracking-wide">{toastMessage}</span>
             </div>
-            <ParacasHistory />
-          </section>
-
-          <section id="concept" className="scroll-mt-24">
-            <ConceptGallery />
-          </section>
-
-          <section id="architecture" className="scroll-mt-24">
-            <ArchitecturalRecommendations />
-          </section>
-
-          {/* 3. LIFESTYLE & AMENITIES */}
-          <section id="lifestyle" className="scroll-mt-24">
-            <div className="text-center mt-12 mb-[-4rem]">
-               <span className="font-mono text-[10px] uppercase tracking-widest text-stone-400 border border-stone-300 px-3 py-1 rounded-full">
-                 Habiendo validado la viabilidad, proponemos
-               </span>
-            </div>
-            <LifestyleAmenities />
-          </section>
-
-          {/* 4. PUENTE DE OBJECIONES ANTES DEL MAPA */}
-          <ObjectionsBridge />
-
-          {/* 5. PRODUCT: MASTERPLAN */}
-
-          <section id="masterplan" className="scroll-mt-24">
-             <div className="text-center space-y-4 mb-8">
-               <h2 className="font-display text-4xl sm:text-5xl font-black text-[#2D3339] uppercase tracking-wider">
-                 Explora la lógica del desarrollo
-               </h2>
-               <p className="text-stone-600 font-mono text-sm max-w-2xl mx-auto">
-                 Aquí el valor del lote depende también del conjunto. Trazados eólicos empíricos aplicados para mitigar la fricción de la Paraca y proteger el espacio habitacional.
-               </p>
-             </div>
-             <div className="w-full">
-                <MoonParacasMap
-                  lots={lots}
-                  selectedLot={selectedLot}
-                  onSelectLot={setSelectedLot}
-                />
-             </div>
-          </section>
-
-          {/* 4. FINANCIAL SIMULATOR */}
-          <section id="financiamiento" className="scroll-mt-24 w-full max-w-2xl mx-auto">
-            <div className="text-center space-y-2 mb-6">
-               <h2 className="font-display text-3xl font-black text-[#2D3339] uppercase tracking-wider">
-                 Calcula tu cronograma
-               </h2>
-               <p className="text-stone-500 font-mono text-sm max-w-lg mx-auto">
-                 Sin intermediarios bancarios, con una estructura de crédito directo diseñada para proteger tu flujo de caja mientras la obra avanza.
-               </p>
-            </div>
-            <LotDetailsModal
-              lot={selectedLot}
-              onReserve={handleReserveLot}
-            />
-          </section>
-
-          {/* 5. ENGINEERING SPECS */}
-          <section id="engineering" className="scroll-mt-24">
-            <EngineeringSpecs />
-          </section>
-
-          {/* 6. CONTRACTS & SIGNATURE */}
-          <section id="signature" className="scroll-mt-24">
-            <ContractsSignature 
-              selectedLot={selectedLot}
-              onSignatureSuccess={(msg) => {
-                setToastMessage(msg);
-                setTimeout(() => setToastMessage(null), 5500);
-              }}
-            />
-          </section>
-
-        </div>
-
-
-        {/* SOLICITAR ASESORÍA PRIVADA (Inspired directly by the reference website layout) */}
-        <div id="contact-form" className="rounded-none border-4 border-[#2D3339] bg-white p-6 sm:p-8 shadow-lg space-y-6">
-          <div className="text-center max-w-2xl mx-auto space-y-3">
-            <h2 className="font-sans text-sm font-black tracking-widest text-[#8C905C] uppercase">
-              COTIZA TU LOTE DE CAMPO RÚSTICO DE LUJO
-            </h2>
-            <h3 className="font-display text-3xl sm:text-4xl font-black text-[#2D3339] tracking-tight uppercase">
-              CONTÁCTANOS
-            </h3>
-            <p className="text-sm text-stone-600">
-              Déjanos tus datos y un asesor especializado de Moon Paracas se pondrá en contacto contigo lo más pronto posible para agendar una visita al desierto.
-            </p>
-          </div>
-
-          {formSubmitted ? (
-            <div className="border-4 border-dashed border-[#8C905C] bg-[#8C905C]/5 p-8 text-center space-y-4 max-w-xl mx-auto animate-fade-in font-mono">
-              <span className="text-4xl text-[#8C905C]">🏜️</span>
-              <h4 className="font-bold text-lg text-[#2D3339] uppercase tracking-wide">¡Solicitud Registrada con Éxito!</h4>
-              <p className="text-xs text-stone-600 leading-relaxed">
-                Gracias, <strong>{contactName}</strong>. Hemos pre-registrado tu interés en el <strong>Lote {selectedLot?.id || "en consulta"}</strong>. Un arquitecto-promotor te enviará los planos catastrales oficiales y el reglamento por correo a <em>{contactEmail}</em> o vía WhatsApp al <em>{contactPhone}</em>.
-              </p>
-              <button
-                onClick={() => {
-                  setFormSubmitted(false);
-                  setContactName("");
-                  setContactEmail("");
-                  setContactPhone("");
-                  setContactMessage("");
-                }}
-                className="mt-2 rounded-none bg-[#2D3339] text-white border-2 border-[#2D3339] px-5 py-2 text-xs font-bold font-mono tracking-wider hover:bg-stone-800"
-              >
-                REGISTRAR OTRA CONSULTA
-              </button>
-            </div>
-          ) : (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (!contactName || !contactPhone || !contactEmail) {
-                  setToastMessage("Por favor rellena todos los campos obligatorios (*).");
-                  setTimeout(() => setToastMessage(null), 3000);
-                  return;
-                }
-                setFormSubmitted(true);
-              }}
-              className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-4xl mx-auto font-mono text-xs"
-            >
-              <div className="md:col-span-2 mb-4 p-3 bg-stone-100 border-l-4 border-[#C4A484] text-xs text-stone-600 font-mono">
-                Al solicitar asesoría, garantizamos absoluta confidencialidad sobre su estructuración de pagos.
-              </div>
-              {/* Left Column Fields */}
-              <div className="space-y-3 text-[#2D3339]">
-                <div className="space-y-1">
-                  <label className="font-bold uppercase text-[10px] text-stone-500 tracking-wider flex justify-between">
-                    <span>Nombre Completo *</span>
-                    <span className="text-[9px] text-[#8C905C] italic">Requerido</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    className="w-full rounded-none border-2 border-[#2D3339] px-3.5 py-2 hover:bg-stone-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8C905C] transition-colors"
-                    placeholder="Ej. Carlos Mendoza Quiroz"
-                    value={contactName}
-                    onChange={(e) => setContactName(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold uppercase text-[10px] text-stone-500 tracking-wider flex justify-between">
-                    <span>WhatsApp / Celular *</span>
-                    <span className="text-[9px] text-[#8C905C]">Prefijo Perú: +51</span>
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    className="w-full rounded-none border-2 border-[#2D3339] px-3.5 py-2 hover:bg-stone-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8C905C] transition-colors"
-                    placeholder="Ej. +51 987 654 321"
-                    value={contactPhone}
-                    onChange={(e) => setContactPhone(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-bold uppercase text-[10px] text-stone-500 tracking-wider">Correo Electrónico *</label>
-                  <input
-                    type="email"
-                    required
-                    className="w-full rounded-none border-2 border-[#2D3339] px-3.5 py-2 hover:bg-stone-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8C905C] transition-colors"
-                    placeholder="Ej. carlos.mendoza@gmail.com"
-                    value={contactEmail}
-                    onChange={(e) => setContactEmail(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Right Column Fields */}
-              <div className="space-y-3 flex flex-col justify-between text-[#2D3339]">
-                <div className="space-y-1">
-                  <label className="font-bold uppercase text-[10px] text-stone-500 tracking-wider">Lote de Interés (Auto-seleccionado)</label>
-                  <input
-                    type="text"
-                    disabled
-                    className="w-full rounded-none border-2 border-[#2D3339] px-3.5 py-2 bg-[#F4F4F1] font-bold text-[#8C905C]"
-                    value={
-                      selectedLot 
-                        ? `Lote ${selectedLot.number} - ${selectedLot.quadrant} (${selectedLot.area.toFixed(2)} m² - S/ ${selectedLot.price.toLocaleString('es-PE', {maximumFractionDigits: 0})})`
-                        : "Ningún lote seleccionado en el plano"
-                    }
-                  />
-                </div>
-
-                <div className="space-y-1 flex-1 flex flex-col">
-                  <label className="font-bold uppercase text-[10px] text-stone-500 tracking-wider">Mensaje de Consulta</label>
-                  <textarea
-                    rows={3}
-                    className="w-full rounded-none border-2 border-[#2D3339] px-3.5 py-2 hover:bg-stone-50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#8C905C] flex-1 min-h-[90px] transition-colors text-[#2D3339]"
-                    placeholder="Deseo revisar los planos arquitectónicos y evaluar la estructura de financiamiento directo para la Fase 1..."
-                    value={contactMessage}
-                    onChange={(e) => setContactMessage(e.target.value)}
-                  />
-                </div>
-              </div>
-
-              {/* Form submit & secondary direct whatsapp trigger */}
-              <div className="md:col-span-2 pt-2 flex flex-col sm:flex-row gap-3">
-                <button
-                  type="submit"
-                  className="flex-1 bg-[#8C905C] border-2 border-[#2D3339] text-white font-bold text-xs py-3.5 px-6 uppercase tracking-widest hover:bg-[#7a7e4e] transition-all shadow-[3px_3px_0px_#2D3339] active:translate-y-0.5 active:shadow-[1px_1px_0px_#2D3339]"
-                >
-                  INICIAR EVALUACIÓN DE INGRESO
-                </button>
-                
-                {selectedLot && (
-                  <a
-                    href={`https://wa.me/51987654321?text=Hola!%20Deseo%20cotizar%20el%20lote%20${selectedLot.id}%20con%20m2%20de%20${selectedLot.area}%20de%20área.`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-[#00E676] hover:bg-[#00C853] text-[#2D3339] font-bold text-xs py-3.5 px-6 border-2 border-[#2D3339] flex items-center justify-center gap-2 transition-all shadow-[3px_3px_0px_#2D3339] active:translate-y-0.5 active:shadow-[1px_1px_0px_#2D3339]"
-                  >
-                    <MessageSquare className="h-4.5 w-4.5 fill-current" />
-                    CONVERSACIÓN PRIVADA
-                  </a>
-                )}
-              </div>
-            </form>
           )}
+
+          <main className="flex-1 relative z-10">
+            <Routes>
+              <Route path="/" element={
+                <Home 
+                  activeVideoIdx={activeVideoIdx} 
+                  setActiveVideoIdx={setActiveVideoIdx} 
+                  isBgPaused={isBgPaused} 
+                  setIsBgPaused={setIsBgPaused} 
+                />
+              } />
+              
+              <Route path="/simulador" element={
+                <Simulator 
+                  lots={lots} 
+                  selectedLot={selectedLot} 
+                  setSelectedLot={setSelectedLot} 
+                  handleReserveLot={handleReserveLot} 
+                />
+              } />
+              
+              <Route path="/paracas-dome/*" element={
+                <ParacasDome 
+                  lots={domeLots} 
+                  selectedLot={selectedDomeLot} 
+                  setSelectedLot={setSelectedDomeLot} 
+                  handleReserveLot={handleReserveLot} 
+                />
+              } />
+              
+              <Route path="/admin/paracas-dome/*" element={
+                loading ? (
+                  <div className="min-h-[70vh] flex items-center justify-center text-[#F5F2EB] font-bold uppercase tracking-widest text-xs">
+                    Cargando panel interno...
+                  </div>
+                ) : user ? (
+                  <ParacasDomeAdmin lots={domeLots} />
+                ) : (
+                  <AuthScreen />
+                )
+              } />
+              
+              <Route path="/comisiones" element={<Comisiones />} />
+              <Route path="/galeria" element={<Gallery />} />
+              <Route path="/experiencia" element={<Experience />} />
+              <Route path="/tecnica" element={
+                <Technical 
+                  selectedLot={selectedLot} 
+                  onSignatureSuccess={(msg) => {
+                    setToastMessage(msg);
+                    setTimeout(() => setToastMessage(null), 5500);
+                  }} 
+                />
+              } />
+            </Routes>
+          </main>
+
+          {/* Global Footer (Contáctanos) */}
+          <Footer selectedLot={selectedLot} />
         </div>
-
-        {/* Technical Map references guide card */}
-        <div className="rounded-none border-4 border-[#2D3339] bg-[#2D3339] p-6 text-stone-100 shadow-lg space-y-4 relative overflow-hidden">
-          <div className="absolute top-0 right-0 h-40 w-40 bg-gradient-to-bl from-[#C4A484]/10 to-transparent pointer-events-none rounded-none" />
-          <div className="space-y-2">
-            <h3 className="font-mono text-sm font-bold text-[#C4A484] uppercase tracking-wider flex items-center gap-2">
-              <Compass className="h-5 w-5 text-[#C4A484]" />
-              Sustentación de Altura y Nivel Topográfico (PT-01)
-            </h3>
-            <p className="text-xs text-stone-300 leading-relaxed font-mono max-w-4xl">
-              El Lote Matriz del condominio reporta una gradiente altimétrica que oscila desde los <strong>106.5m s.n.m.</strong> en la zona sur (pórtico de ingreso Atardecer) hasta los <strong>113.5m s.n.m.</strong> en el extremo norte (Sectores altos de El Mirador). El diseño vial concéntrico del Oasis respeta a cabalidad las líneas naturales de contorno, evitando movimientos de tierra agresivos que alteren el ecosistema de dunas y asegurando que el 94% de los lotes retengan vistas despejadas horizontales.
-            </p>
-          </div>
-        </div>
-
-      </main>
-
-      {/* Luxury Footer with contacts info mimicking real agency landing page */}
-      <footer className="mx-auto max-w-7xl px-4 sm:px-6 border-t-2 border-[#2D3339]/20 mt-16 pt-8 text-stone-500 text-xs font-mono">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Trees className="h-5 w-5 text-[#6B8E23]" />
-            <div>
-              <p className="font-mono font-bold text-[#2D3339] uppercase">MOON PARACAS</p>
-              <p className="text-[10px] text-stone-500">© 2026 Asociación Civil de Adjudicatarios Moon Paracas · Ica, Perú.</p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-4 text-stone-500 text-[11px]">
-            <span className="flex items-center gap-1.5 hover:text-[#2D3339] cursor-pointer">
-              <Phone className="h-3.5 w-3.5 text-[#C4A484]" /> +51 987 654 321
-            </span>
-            <span className="flex items-center gap-1.5 hover:text-[#2D3339] cursor-pointer">
-              <Mail className="h-3.5 w-3.5 text-[#C4A484]" /> info@moonparacas-eco.pe
-            </span>
-            <span className="flex items-center gap-1.5 hover:text-[#2D3339] cursor-pointer">
-              <Map className="h-3.5 w-3.5 text-[#6B8E23]" /> Paracas, Km 245 Panamericana Sur
-            </span>
-          </div>
-        </div>
-      </footer>
-    </div>
-    </>
+      </div>
+    </BrowserRouter>
   );
 }

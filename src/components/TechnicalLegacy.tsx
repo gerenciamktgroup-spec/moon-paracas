@@ -4,7 +4,7 @@ import { Landmark, Mountain, Waves, Wind } from "lucide-react";
 
 export const TechnicalLegacy: React.FC = () => {
   return (
-    <section id="legado" className="w-full bg-[#2D3339] py-32 px-6 sm:px-12 scroll-mt-24 text-stone-300">
+    <section id="legado" className="w-full bg-[#2D3339] py-32 px-8 sm:px-12 scroll-mt-24 text-stone-300">
       <div className="max-w-6xl mx-auto space-y-24">
         
         {/* Section Header */}
@@ -49,14 +49,21 @@ export const TechnicalLegacy: React.FC = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ delay: 0.3 }}
-            className="border border-stone-600/50 p-8 space-y-6 hover:bg-stone-800/30 transition-colors"
+            className="group relative border border-stone-600/50 min-h-[320px] overflow-hidden flex flex-col justify-end p-8 shadow-lg"
           >
-            <Mountain className="h-8 w-8 text-[#C4A484] stroke-[1.5]" />
-            <div className="space-y-2">
-              <h3 className="font-display text-xl text-[#F4F4F1]">Asentamiento Estructural</h3>
-              <p className="text-sm font-mono text-stone-400 leading-relaxed">
-                Criterios probados en arena y topografías asimétricas para evitar hundimientos y consolidar terreno seguro.
-              </p>
+            <img src="/media/tech_rock.jpeg" alt="Asentamiento Estructural" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+            <div className="absolute inset-0 bg-gradient-to-t from-stone-900 via-stone-900/80 to-stone-900/30 transition-opacity duration-300 group-hover:opacity-90" />
+            
+            <div className="relative z-10 flex flex-col space-y-6">
+              <div className="p-3 bg-stone-900/50 backdrop-blur-sm border border-stone-600/50 w-fit rounded-sm">
+                <Mountain className="h-6 w-6 text-[#C4A484] stroke-[1.5]" />
+              </div>
+              <div className="space-y-2 translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                <h3 className="font-display text-xl text-[#F4F4F1]">Asentamiento Estructural</h3>
+                <p className="text-xs font-mono text-stone-300 leading-relaxed opacity-90">
+                  Criterios probados en arena y topografías asimétricas para evitar hundimientos y consolidar terreno seguro.
+                </p>
+              </div>
             </div>
           </motion.div>
 
@@ -65,14 +72,21 @@ export const TechnicalLegacy: React.FC = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ delay: 0.4 }}
-            className="border border-stone-600/50 p-8 space-y-6 hover:bg-stone-800/30 transition-colors"
+            className="group relative border border-stone-600/50 min-h-[320px] overflow-hidden flex flex-col justify-end p-8 shadow-lg"
           >
-            <Wind className="h-8 w-8 text-[#C4A484] stroke-[1.5]" />
-            <div className="space-y-2">
-              <h3 className="font-display text-xl text-[#F4F4F1]">Lectura del Viento</h3>
-              <p className="text-sm font-mono text-stone-400 leading-relaxed">
-                Trazados eólicos empíricos aplicados para mitigar la fricción de la Paraca y proteger el espacio habitacional.
-              </p>
+            <img src="/media/tech_sand.jpeg" alt="Lectura del Viento" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+            <div className="absolute inset-0 bg-gradient-to-t from-stone-900 via-stone-900/80 to-stone-900/30 transition-opacity duration-300 group-hover:opacity-90" />
+            
+            <div className="relative z-10 flex flex-col space-y-6">
+              <div className="p-3 bg-stone-900/50 backdrop-blur-sm border border-stone-600/50 w-fit rounded-sm">
+                <Wind className="h-6 w-6 text-[#C4A484] stroke-[1.5]" />
+              </div>
+              <div className="space-y-2 translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                <h3 className="font-display text-xl text-[#F4F4F1]">Lectura del Viento</h3>
+                <p className="text-xs font-mono text-stone-300 leading-relaxed opacity-90">
+                  Trazados eólicos empíricos aplicados para mitigar la fricción de la Paraca y proteger el espacio habitacional.
+                </p>
+              </div>
             </div>
           </motion.div>
 
@@ -81,14 +95,21 @@ export const TechnicalLegacy: React.FC = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
             transition={{ delay: 0.5 }}
-            className="border border-stone-600/50 p-8 space-y-6 hover:bg-stone-800/30 transition-colors"
+            className="group relative border border-stone-600/50 min-h-[320px] overflow-hidden flex flex-col justify-end p-8 shadow-lg"
           >
-            <Waves className="h-8 w-8 text-[#C4A484] stroke-[1.5]" />
-            <div className="space-y-2">
-              <h3 className="font-display text-xl text-[#F4F4F1]">Integración Operativa</h3>
-              <p className="text-sm font-mono text-stone-400 leading-relaxed">
-                Experiencia previa en saneamiento y viabilidad de servicios (agua y energía) en zonas áridas de la costa sur.
-              </p>
+            <img src="/media/tech_water.jpeg" alt="Integración Operativa" className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+            <div className="absolute inset-0 bg-gradient-to-t from-stone-900 via-stone-900/80 to-stone-900/30 transition-opacity duration-300 group-hover:opacity-90" />
+            
+            <div className="relative z-10 flex flex-col space-y-6">
+              <div className="p-3 bg-stone-900/50 backdrop-blur-sm border border-stone-600/50 w-fit rounded-sm">
+                <Waves className="h-6 w-6 text-[#C4A484] stroke-[1.5]" />
+              </div>
+              <div className="space-y-2 translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
+                <h3 className="font-display text-xl text-[#F4F4F1]">Integración Operativa</h3>
+                <p className="text-xs font-mono text-stone-300 leading-relaxed opacity-90">
+                  Experiencia previa en saneamiento y viabilidad de servicios (agua y energía) en zonas áridas de la costa sur.
+                </p>
+              </div>
             </div>
           </motion.div>
         </div>

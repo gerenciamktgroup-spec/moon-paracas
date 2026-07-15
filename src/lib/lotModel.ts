@@ -1,235 +1,212 @@
 import { BlockPolygon, Lot, LotStatus, LotTypology, XY } from "../types/map";
 import { BLOCK_SPECS } from "../data/business";
-import { shoelaceArea, centroid } from "./geometry";
+import { shoelaceArea, centroid, isPointInPolygon } from "./geometry";
 import { getMeterToSvgScale, buildTerrainScene } from "./terrainModel";
 import { slicePolyRing, getPointOnPoly, getPointAndNormalOnPoly } from "./curve";
-import { BAND_BLOCKS, BAND_OFFSETS, getBandPoint, globalOasisBoundary } from "./blockModel";
-import { checkCollision } from "./spatialAnalyzer";
+import { BAND_BLOCKS, BAND_OFFSETS, getBandPoint, globalOasisBoundary, getCurvedD } from "./blockModel";
+import { checkCollision, assertInsidePerimeter } from "./spatialAnalyzer";
+import lotsStatusMap from "../data/lots_status.json";
 
+export interface GeospatialValidator {
+  validateCollision(polygon: XY[], obstacles: XY[][], shrinkM?: number): boolean;
+  validateInsidePerimeter(polygon: XY[], label: string): void;
+}
+
+export const turfValidator: GeospatialValidator = {
+  validateCollision(polygon: XY[], obstacles: XY[][], shrinkM = 0.1): boolean {
+    return checkCollision(polygon, obstacles, shrinkM);
+  },
+  validateInsidePerimeter(polygon: XY[], label: string): void {
+    assertInsidePerimeter(polygon, label);
+  }
+};
 
 function makeLotId(n: number) {
-  return `L${String(n).padStart(3, "0")}`;
+  return `LOTE-${n}`;
 }
 
-function inferStatus(n: number): LotStatus {
-  // Oferta comercial etapa 30 lotes a S/ 50. Elegimos un bloque consecutivo o intercalado.
-  // We'll pick 30 specific lots to be on "offer" (e.g. from 20 to 49)
-  if (n >= 20 && n <= 49) return "offer";
-  return "available";
+function getLotCorners(polygon: XY[]): { p1: XY; p2: XY; p3: XY; p4: XY } {
+  // polygon has (steps + 1) * 2 = 14 points (from steps = 6)
+  const steps = 6;
+  return {
+    p1: polygon[0],
+    p2: polygon[steps],
+    p3: polygon[steps + 1],
+    p4: polygon[polygon.length - 1]
+  };
 }
 
-// Ray-polyline intersection
-function getRayPolylineIntersection(rayStart: XY, rayDir: XY, polyline: XY[]): XY | null {
-  let minT = Infinity;
-  let intersectPt: XY | null = null;
-
-  for (let i = 0; i < polyline.length; i++) {
-    const A = polyline[i];
-    const B = polyline[(i + 1) % polyline.length];
-    const v = { x: B.x - A.x, y: B.y - A.y };
-
-    const cross_d_v = rayDir.x * v.y - rayDir.y * v.x;
-    if (Math.abs(cross_d_v) < 1e-9) continue; // Parallel
-
-    const cross_ap_v = (A.x - rayStart.x) * v.y - (A.y - rayStart.y) * v.x;
-    const cross_ap_d = (A.x - rayStart.x) * rayDir.y - (A.y - rayStart.y) * rayDir.x;
-
-    const t = cross_ap_v / cross_d_v;
-    const u = cross_ap_d / cross_d_v;
-
-    if (t >= 0 && u >= 0 && u <= 1) {
-      if (t < minT) {
-        minT = t;
-        intersectPt = {
-          x: rayStart.x + t * rayDir.x,
-          y: rayStart.y + t * rayDir.y
-        };
-      }
-    }
-  }
-
-  return intersectPt;
-}
-
-function projectPointAlongNormalToPoly(
-  pt: XY,
-  normal: XY,
-  center: XY,
-  polyline: XY[],
-  fallbackT: number
-): XY {
-  const intersect = getRayPolylineIntersection(pt, normal, polyline);
-  if (intersect) return intersect;
-
-  // Fallback 1: Project towards the center of gravity
-  const dir = { x: center.x - pt.x, y: center.y - pt.y };
-  const fallbackIntersect = getRayPolylineIntersection(pt, dir, polyline);
-  if (fallbackIntersect) return fallbackIntersect;
-
-  // Fallback 2: Direct parametric point
-  return getPointOnPoly(polyline, fallbackT);
-}
-
-// Parallel block subdivision (1 row per block, aligned t-cuts)
-function subdivideParallelBlock(block: BlockPolygon, count: number): XY[][] {
+// Parallel block subdivision (1 row per block, aligned t-cuts, curved edges)
+export function subdivideParallelBlockCustom(block: BlockPolygon, count: number, d_low_val: number, d_high_val: number): XY[][] {
   if (!block.ringData) return [block.polygon];
   
   const { t_start, t_end } = block.ringData;
   const scale = getMeterToSvgScale();
   const { innerBuffer } = buildTerrainScene();
   
-  // Find band index and offsets
-  const b = BAND_BLOCKS.findIndex(arr => arr.includes(block.id));
-  const offsets = BAND_OFFSETS[b];
-  if (!offsets) return [block.polygon];
+  const gap_t = 0.0015;
+  const half = Math.floor(count / 2);
   
-  const lots: XY[][] = [];
+  // Compute arc length parameters to equalize frontages in curved streets
+  const samples = 50;
+  const t_vals: number[] = [];
+  const arc_lengths: number[] = [0];
+  let total_arc = 0;
   
-  // 4m wide pedestrian gap in t (approx 0.012 on t-axis)
-  const gap_t = 0.012;
-  const L_t = t_end - t_start;
-  const isTinyHouseBlock = ["M4", "M5", "M6", "M19", "M20", "M21"].includes(block.id);
-  const effectiveCount = isTinyHouseBlock ? Math.floor(count / 2) : count;
-  const dt = (L_t - gap_t) / effectiveCount;
-  const half = Math.floor(effectiveCount / 2);
-  
-  // Helper to compute t value for each cut index
-  const getTVal = (idx: number) => {
-    let t_base = (idx <= half) ? t_start + idx * dt : t_start + idx * dt + gap_t;
-    const isOrganic = ["M2", "M5", "M8", "M17", "M20", "M23"].includes(block.id);
-    if (isOrganic && idx > 0 && idx < effectiveCount) {
-      t_base += 0.007 * Math.sin(idx * 2.5);
+  for (let s = 0; s <= samples; s++) {
+    const t = t_start + s * (t_end - t_start) / samples;
+    t_vals.push(t);
+    if (s > 0) {
+      const prev_t = t_vals[s - 1];
+      const p_low_prev = getBandPoint(innerBuffer, prev_t, getCurvedD(prev_t, d_low_val), scale);
+      const p_low_curr = getBandPoint(innerBuffer, t, getCurvedD(t, d_low_val), scale);
+      
+      const p_high_prev = getBandPoint(innerBuffer, prev_t, getCurvedD(prev_t, d_high_val), scale);
+      const p_high_curr = getBandPoint(innerBuffer, t, getCurvedD(t, d_high_val), scale);
+      
+      const d_low = Math.hypot(p_low_curr.x - p_low_prev.x, p_low_curr.y - p_low_prev.y) / scale;
+      const d_high = Math.hypot(p_high_curr.x - p_high_prev.x, p_high_curr.y - p_high_prev.y) / scale;
+      
+      const avg_d = (d_low + d_high) / 2;
+      total_arc += avg_d;
+      arc_lengths.push(total_arc);
     }
-    return t_base;
-  };
-  
-  // Helper to compute d shifts for each cut index (set to 0 for clean straight boundaries)
-  const getShiftLow = (idx: number) => {
-    return 0;
-  };
-  
-  const getShiftHigh = (idx: number) => {
-    return 0;
-  };
-  
-  for (let c = 0; c < effectiveCount; c++) {
-    const t1 = getTVal(c);
-    const t2 = getTVal(c + 1);
-    
-    let d1_low  = offsets.low + getShiftLow(c);
-    let d2_low  = offsets.low + getShiftLow(c + 1);
-    let d2_high = offsets.high + getShiftHigh(c + 1);
-    let d1_high = offsets.high + getShiftHigh(c);
-    
-    // Dynamic adjustments for Band 4 (M10-M12)
-    if (b === 3) {
-      d1_high = 103 - Math.max(0, 14 * Math.sin(3 * Math.PI * t1));
-      d2_high = 103 - Math.max(0, 14 * Math.sin(3 * Math.PI * t2));
-    }
-    // Dynamic adjustments for Band 5 (M13-M15)
-    if (b === 4) {
-      d1_low = 128 + Math.max(0, 14 * Math.sin(3 * Math.PI * t1));
-      d2_low = 128 + Math.max(0, 14 * Math.sin(3 * Math.PI * t2));
-    }
-    
-    const slope = (block.ringData?.isFirstRow) 
-        ? ((block.ringData.t_start_high ?? t_start) - (block.ringData.t_start_low ?? t_start)) 
-        : 0;
-        
-    const getOffsetForT = (t_val: number) => {
-      const progress = (t_val - t_start) / L_t;
-      return slope * Math.max(0, Math.min(1, 1 - progress));
-    };
+  }
 
-    let current_t1_low = t1;
-    let current_t1_high = t1 + getOffsetForT(t1);
-    
-    // For the back edge of the lot
-    let current_t2_low = t2;
-    let current_t2_high = t2 + getOffsetForT(t2);
-
-    // Exact override for the very first lot to perfectly seal the block boundary
-    if (c === 0 && block.ringData?.isFirstRow) {
-       current_t1_low = block.ringData.t_start_low ?? current_t1_low;
-       current_t1_high = block.ringData.t_start_high ?? current_t1_high;
-    }
-
-    const p1 = getBandPoint(innerBuffer, current_t1_low, d1_low,  scale);
-    const p2 = getBandPoint(innerBuffer, current_t2_low, d2_low,  scale);
-    const p3 = getBandPoint(innerBuffer, current_t2_high, d2_high, scale);
-    const p4 = getBandPoint(innerBuffer, current_t1_high, d1_high, scale);
-    
-    if (isTinyHouseBlock) {
-      const d1_mid = (d1_low + d1_high) / 2;
-      const d2_mid = (d2_low + d2_high) / 2;
-      
-      const current_t1_mid = (current_t1_low + current_t1_high) / 2;
-      const current_t2_mid = (current_t2_low + current_t2_high) / 2;
-      
-      const p1a = p1;
-      const p2a = p2;
-      const p3a = getBandPoint(innerBuffer, current_t2_mid, d2_mid, scale);
-      const p4a = getBandPoint(innerBuffer, current_t1_mid, d1_mid, scale);
-      
-      const p1b = p4a;
-      const p2b = p3a;
-      const p3b = p3;
-      const p4b = p4;
-      
-      lots.push([p1a, p2a, p3a, p4a]);
-      lots.push([p1b, p2b, p3b, p4b]);
-    } else {
-      if (b === 3) {
-        // Curve along d_high (from p3 back to p4, i.e. current_t2_high to current_t1_high)
-        const curvedEdge: XY[] = [];
-        const steps = 12;
-        for (let s = 0; s <= steps; s++) {
-          const curr_t = current_t2_high + (current_t1_high - current_t2_high) * (s / steps);
-          const scallop = 14 * Math.sin(3 * Math.PI * curr_t);
-          const curr_d = 103 - Math.max(0, scallop);
-          curvedEdge.push(getBandPoint(innerBuffer, curr_t, curr_d, scale));
-        }
-        lots.push([p1, p2, ...curvedEdge]);
-      } else if (b === 4) {
-        // Curve along d_low (from p1 to p2, i.e. current_t1_low to current_t2_low)
-        const curvedEdge: XY[] = [];
-        const steps = 12;
-        for (let s = 0; s <= steps; s++) {
-          const curr_t = current_t1_low + (current_t2_low - current_t1_low) * (s / steps);
-          const scallop = 14 * Math.sin(3 * Math.PI * curr_t);
-          const curr_d = 128 + Math.max(0, scallop);
-          curvedEdge.push(getBandPoint(innerBuffer, curr_t, curr_d, scale));
-        }
-        lots.push([...curvedEdge, p3, p4]);
+  function getRawEqualCuts(): number[] {
+    const u: number[] = [t_start];
+    const segment = total_arc / count;
+    for (let c = 1; c < count; c++) {
+      const target = c * segment;
+      let idx = 0;
+      while (idx < arc_lengths.length && arc_lengths[idx] < target) {
+        idx++;
+      }
+      if (idx === 0) {
+        u.push(t_start);
       } else {
-        lots.push([p1, p2, p3, p4]);
+        const l_prev = arc_lengths[idx - 1];
+        const l_curr = arc_lengths[idx];
+        const t_prev = t_vals[idx - 1];
+        const t_curr = t_vals[idx];
+        const f = (target - l_prev) / (l_curr - l_prev || 1);
+        u.push(t_prev + f * (t_curr - t_prev));
       }
     }
+    u.push(t_end);
+    return u;
+  }
+  
+  const u = getRawEqualCuts();
+  const u_half = u[half];
+  const lots: XY[][] = [];
+  
+  function createLotPolygon(t1: number, t2: number): XY[] {
+    const curvedEdgeLow: XY[] = [];
+    const curvedEdgeHigh: XY[] = [];
+    const steps = 6;
+    
+    for (let s = 0; s <= steps; s++) {
+      const curr_t = t1 + (t2 - t1) * (s / steps);
+      const curr_d_low = getCurvedD(curr_t, d_low_val);
+      curvedEdgeLow.push(getBandPoint(innerBuffer, curr_t, curr_d_low, scale));
+    }
+    for (let s = steps; s >= 0; s--) {
+      const curr_t = t1 + (t2 - t1) * (s / steps);
+      const curr_d_high = getCurvedD(curr_t, d_high_val);
+      curvedEdgeHigh.push(getBandPoint(innerBuffer, curr_t, curr_d_high, scale));
+    }
+    
+    return [...curvedEdgeLow, ...curvedEdgeHigh];
+  }
+  
+  for (let c = 0; c < count; c++) {
+    const t1 = u[c];
+    const t2 = u[c + 1];
+    
+    let t1_shifted = t1;
+    let t2_shifted = t2;
+    
+    if (c < half) {
+      t1_shifted = t1 - (gap_t / 2) * ((t1 - t_start) / (u_half - t_start || 1));
+    } else {
+      t1_shifted = t1 + (gap_t / 2) * ((t_end - t1) / (t_end - u_half || 1));
+    }
+    
+    if (c < half - 1) {
+      t2_shifted = t2 - (gap_t / 2) * ((t2 - t_start) / (u_half - t_start || 1));
+    } else if (c === half - 1) {
+      t2_shifted = u_half - gap_t / 2;
+    } else {
+      t2_shifted = t2 + (gap_t / 2) * ((t_end - t2) / (t_end - u_half || 1));
+    }
+    
+    lots.push(createLotPolygon(t1_shifted, t2_shifted));
   }
   
   return lots;
 }
 
-function getLotCorners(polygon: XY[], b: number): { p1: XY; p2: XY; p3: XY; p4: XY } {
-  if (polygon.length === 4) {
-    return { p1: polygon[0], p2: polygon[1], p3: polygon[2], p4: polygon[3] };
-  }
-  if (b === 3) {
-    // [p1, p2, ...curvedEdge] where curvedEdge starts at p3 and ends at p4
-    return { p1: polygon[0], p2: polygon[1], p3: polygon[2], p4: polygon[polygon.length - 1] };
-  }
-  if (b === 4) {
-    // [...curvedEdge, p3, p4] where curvedEdge starts at p1 and ends at p2 (13 elements, index 0 to 12)
-    return { p1: polygon[0], p2: polygon[12], p3: polygon[13], p4: polygon[14] };
-  }
-  return { p1: polygon[0], p2: polygon[1], p3: polygon[2], p4: polygon[3] };
+export function subdivideParallelBlock(block: BlockPolygon, count: number): XY[][] {
+  const b = BAND_BLOCKS.findIndex(arr => arr.includes(block.id));
+  const offsets = BAND_OFFSETS[b];
+  if (!offsets) return [block.polygon];
+  return subdivideParallelBlockCustom(block, count, offsets.low, offsets.high);
 }
 
-export function buildLots(blocks: BlockPolygon[], parkings?: Lot[]): Lot[] {
+export function subdivideDoubleRowBlock(block: BlockPolygon, count: number): XY[][] {
+  const b = BAND_BLOCKS.findIndex(arr => arr.includes(block.id));
+  const offsets = BAND_OFFSETS[b];
+  if (!offsets) return [block.polygon];
+  
+  const d_mid = (offsets.low + offsets.high) / 2;
+  const countPerRow = Math.floor(count / 2);
+  
+  const row1 = subdivideParallelBlockCustom(block, countPerRow, offsets.low, d_mid);
+  const row2 = subdivideParallelBlockCustom(block, countPerRow, d_mid, offsets.high);
+  
+  return [...row1, ...row2];
+}
+
+export function buildLots(
+  blocks: BlockPolygon[],
+  parkings: Lot[] = [],
+  roadPolys: XY[][] = [],
+  activeObstacles: XY[][] = []
+): Lot[] {
   let counter = 1;
   let premiumCounter = 0;
+  let offerCount = 0;
   const lots: Lot[] = [];
   const scale = getMeterToSvgScale();
+
+  // Seeded shuffle function to select exactly 30 tiny house lots randomly
+  function seededShuffle<T>(array: T[], seed: number): T[] {
+    const arr = [...array];
+    let m = arr.length, t, i;
+    let s = seed;
+    while (m) {
+      s = (s * 9301 + 49297) % 233280;
+      i = Math.floor((s / 233280) * m--);
+      t = arr[m];
+      arr[m] = arr[i];
+      arr[i] = t;
+    }
+    return arr;
+  }
+
+  const tinyHousePool: number[] = [];
+  // M7-M9: 53 to 104
+  for (let c = 53; c <= 104; c++) {
+    tinyHousePool.push(c);
+  }
+  // M22-M24: 209 to 260
+  for (let c = 209; c <= 260; c++) {
+    tinyHousePool.push(c);
+  }
+
+  const shuffledPool = seededShuffle(tinyHousePool, 45); // Seed 45 gives a nice spread
+  const selectedOfferCounters = new Set(shuffledPool.slice(0, 30));
 
   // Helper to compute minimum distance from a point to a polygon of vertices
   function distanceToPolygon(p: XY, poly: XY[]): number {
@@ -242,21 +219,22 @@ export function buildLots(blocks: BlockPolygon[], parkings?: Lot[]): Lot[] {
     return minD;
   }
 
+  // Cache parking centroids once at the start of buildLots to optimize distance calculations
+  const parkingCentroids = parkings ? parkings.map(p => ({
+    parking: p,
+    centroid: centroid(p.polygon)
+  })) : [];
+
   for (const block of blocks) {
     const spec = BLOCK_SPECS.find(b => b.id === block.id);
     if (!spec) continue;
     
     const b = BAND_BLOCKS.findIndex(arr => arr.includes(block.id));
-    
-    const mix: LotTypology[] = [
-      ...Array(spec.lotMix.standard || 0).fill("standard"),
-      ...Array(spec.lotMix.premium || 0).fill("premium"),
-      ...Array(spec.lotMix.adjustment || 0).fill("adjustment"),
-      ...Array(spec.lotMix.zen || 0).fill("zen")
-    ];
-    mix.sort((a, b) => a.localeCompare(b)); 
 
-    const subPolygons = subdivideParallelBlock(block, spec.targetLotCount);
+    const isDoubleRow = ["M7", "M8", "M9", "M22", "M23", "M24"].includes(block.id);
+    const subPolygons = isDoubleRow
+      ? subdivideDoubleRowBlock(block, spec.targetLotCount)
+      : subdivideParallelBlock(block, spec.targetLotCount);
 
     for (let i = 0; i < spec.targetLotCount; i++) {
       const polygon = subPolygons[i] || block.polygon;
@@ -266,92 +244,82 @@ export function buildLots(blocks: BlockPolygon[], parkings?: Lot[]): Lot[] {
       const realArea = svgArea / (scale * scale);
       const roundedArea = Math.round(realArea * 100) / 100;
 
+      // Calculate exact frontage and depth
+      let frontage = 10;
+      let depth = 20;
       let dimensions = "";
       if (polygon.length >= 4) {
-        const corners = getLotCorners(polygon, b);
+        const corners = getLotCorners(polygon);
+        const top = Math.hypot(corners.p4.x - corners.p3.x, corners.p4.y - corners.p3.y) / scale;
+        const bottom = Math.hypot(corners.p1.x - corners.p2.x, corners.p1.y - corners.p2.y) / scale;
+        const avgFrontage = Math.round(((top + bottom) / 2) * 100) / 100;
+
         const left = Math.hypot(corners.p4.x - corners.p1.x, corners.p4.y - corners.p1.y) / scale;
         const right = Math.hypot(corners.p2.x - corners.p3.x, corners.p2.y - corners.p3.y) / scale;
-        const avgDepth = (left + right) / 2;
+        const avgDepth = Math.round(((left + right) / 2) * 100) / 100;
         
-        let bestW = 10;
-        let bestH = 10;
-        let minDiff = Infinity;
-        
-        const hStart = Math.max(1, avgDepth - 0.5);
-        const hEnd = avgDepth + 0.5;
-        for (let testH = hStart; testH <= hEnd; testH += 0.1) {
-          const h_rounded = Math.round(testH * 10) / 10;
-          const w_rounded = Math.round((roundedArea / h_rounded) * 10) / 10;
-          const diff = Math.abs(w_rounded * h_rounded - roundedArea);
-          if (diff < minDiff) {
-            minDiff = diff;
-            bestW = w_rounded;
-            bestH = h_rounded;
-          }
-        }
-        dimensions = `${bestW.toFixed(1)}m x ${bestH.toFixed(1)}m`;
+        frontage = avgFrontage;
+        depth = avgDepth;
+        dimensions = `${frontage.toFixed(2)}m x ${depth.toFixed(2)}m`;
       }
 
       // Assign commercial typology
       let finalTypology: LotTypology = "standard";
-  
-      // Tiny House: Longitudinal split
-      if (["M4", "M5", "M6", "M19", "M20", "M21"].includes(block.id)) {
+      if (["M7", "M8", "M9", "M10", "M11", "M12", "M22", "M23", "M24"].includes(block.id)) {
         finalTypology = "tiny-house";
-      }
-      // Premium: Lots directly facing the Oasis (inner-ring blocks M10-M15)
-      else if (["M10", "M11", "M12", "M13", "M14", "M15"].includes(block.id)) {
+      } else if (["M13", "M14", "M15", "M16", "M17", "M18"].includes(block.id)) {
         finalTypology = "premium";
-      } 
-      // Adjustment/Irregular: The sharp tips of the diamond terrain
-      else if (["M1", "M3", "M22", "M24"].includes(block.id)) {
+      } else if (["M1", "M2", "M3", "M4", "M5", "M6"].includes(block.id)) {
+        finalTypology = "standard";
+      } else if (["M20"].includes(block.id)) {
+        finalTypology = "zen";
+      } else if (["M28", "M29", "M30"].includes(block.id)) {
         finalTypology = "adjustment";
       }
-      // Zen: The organic domo villages
-      else if (["M2", "M8", "M17", "M23"].includes(block.id)) {
-        finalTypology = "zen";
-      }
-
+      
       let status: LotStatus = "available";
-      if (counter <= 30) {
-        if (counter <= 5) {
-          status = "blocked"; // 5 separados
-        } else if (counter <= 8) {
-          status = "sold";    // 3 vendidos
-        } else {
-          status = "offer";   // 22 en oferta
-        }
-      } else {
-        if (finalTypology === "premium") {
-          premiumCounter++;
-          if (premiumCounter <= 31) {
-            status = "blocked"; // 60% of premium blocked
-          } else {
-            status = "available";
-          }
-        } else {
-          status = "available";
-        }
-      }
 
-      const rate = counter <= 30 ? 60 : 120;
+      // ── PRICING — Fase 0 / Revista Costos ────────────────────────────────
+      const rate = finalTypology === "premium" ? 170 : 120;
       const price = Math.round(roundedArea * rate);
-      const priceLabel = `S/ ${price.toLocaleString('en-US', {maximumFractionDigits:0})}`;
+      const priceLabel = `S/ ${price.toLocaleString('es-PE', {maximumFractionDigits:0})}`;
 
       // Mathematical distances
       const lotCentroid = centroid(polygon);
       const distToPool = Math.round(distanceToPolygon(lotCentroid, globalOasisBoundary) / scale);
 
       let minParkDist = 100; // fallback
-      if (parkings && parkings.length > 0) {
+      let assignedParkingType: "externo_ingreso" | "periferico_interno" = "externo_ingreso";
+      if (parkingCentroids && parkingCentroids.length > 0) {
         let minD = Infinity;
-        for (const p of parkings) {
-          const pCentroid = centroid(p.polygon);
-          const d = Math.hypot(lotCentroid.x - pCentroid.x, lotCentroid.y - pCentroid.y);
-          if (d < minD) minD = d;
+        let closestP: Lot | null = null;
+        for (const pc of parkingCentroids) {
+          const d = Math.hypot(lotCentroid.x - pc.centroid.x, lotCentroid.y - pc.centroid.y);
+          if (d < minD) {
+            minD = d;
+            closestP = pc.parking;
+          }
         }
         minParkDist = Math.round(minD / scale);
+        if (minParkDist > 145) {
+          minParkDist = 145;
+        }
+        if (closestP && (closestP as any).parking_type) {
+          assignedParkingType = (closestP as any).parking_type;
+        }
       }
+
+      // ── Collision with active obstacles (roads, amenities, cocheras) ──────
+      if (activeObstacles && activeObstacles.length > 0) {
+        if (checkCollision(polygon, activeObstacles, 0.1)) {
+          continue; // Skip lot if it overlaps any active obstacle
+        }
+      } else if (roadPolys.length > 0 && checkCollision(polygon, roadPolys, 0.1)) {
+        continue; // Legacy road fallback
+      }
+
+      // ── Bounding Box / Legal Perimeter constraint (Regla A / Phase A) ──────
+      assertInsidePerimeter(polygon, `LOTE-${counter}`);
 
       lots.push({
         id: makeLotId(counter),
@@ -368,7 +336,14 @@ export function buildLots(blocks: BlockPolygon[], parkings?: Lot[]): Lot[] {
         area: roundedArea,
         elevation: 108 + Math.floor(Math.random() * 5),
         distanceToPool: distToPool,
-        hubDistance: minParkDist
+        hubDistance: minParkDist,
+        
+        frontage: frontage,
+        depth: depth,
+        price_soles: price,
+        parking_type: assignedParkingType,
+        walk_distance_parking_meters: minParkDist,
+        walk_distance_oasis_meters: distToPool
       });
 
       counter++;
@@ -378,113 +353,191 @@ export function buildLots(blocks: BlockPolygon[], parkings?: Lot[]): Lot[] {
   return lots;
 }
 
-export function buildParkingLots(innerBuffer: XY[], obstacles: XY[][] = []): Lot[] {
+export function buildParkingLots(
+  innerBuffer: XY[],
+  obstacles: XY[][] = [],
+  roadPolys: XY[][] = []
+ ): Lot[] {
   const scale = getMeterToSvgScale();
   const lots: Lot[] = [];
   let parkingCount = 1;
+ 
+  // ── PARKING HUB GEOMETRY: 4 × L-shaped corner hubs ─────────────────────────
+  interface HubDef {
+    prefix: string;
+    quadrant: string;
+    parking_type: "externo_ingreso" | "periferico_interno";
+    typology: LotTypology;
+    arm1: { tStart: number; tEnd: number; dStart: number; dEnd: number; rows: number };
+    arm2?: { tStart: number; tEnd: number; dStart: number; dEnd: number; rows: number };
+  }
+ 
+  const hubs: HubDef[] = [
+    {
+      prefix: "SW-", quadrant: "PARKING_SW",
+      parking_type: "externo_ingreso", typology: "parking",
+      arm1: { tStart: 0.012, tEnd: 0.042, dStart:   1.0, dEnd:  55.0, rows: 2 },
+    },
+    {
+      prefix: "SE-", quadrant: "PARKING_SE",
+      parking_type: "externo_ingreso", typology: "parking",
+      arm1: { tStart: 0.012, tEnd: 0.042, dStart: 170.0, dEnd: 252.0, rows: 2 },
+    },
+    {
+      prefix: "NW-", quadrant: "PARKING_NW",
+      parking_type: "periferico_interno", typology: "parking",
+      // arm1: Spans left half of the back border, meeting the center (placed behind the road)
+      arm1: { tStart: 0.985, tEnd: 0.985, dStart:   1.0, dEnd: 127.0, rows: 1 },
+      arm2: { tStart: 0.877, tEnd: 0.918, dStart:   1.0, dEnd:  57.0, rows: 3 },
+    },
+    {
+      prefix: "NE-", quadrant: "PARKING_NE",
+      parking_type: "periferico_interno", typology: "parking",
+      // arm1: Spans right half of the back border, starting at the center (placed behind the road)
+      arm1: { tStart: 0.985, tEnd: 0.985, dStart: 127.0, dEnd: 254.0, rows: 1 },
+      arm2: { tStart: 0.875, tEnd: 0.916, dStart: 197.0, dEnd: 254.5, rows: 3 },
+    },
+  ];
 
-  function getMaxTForD(d: number): number {
-    if (d <= 20) return 0.145;
-    if (d <= 46) return 0.115;
-    if (d <= 72) return 0.075;
-    if (d <= 98) return 0.035;
-    
-    if (d >= 133 && d <= 153) return 0.035;
-    if (d > 153 && d <= 179) return 0.075;
-    if (d > 179 && d <= 205) return 0.115;
-    if (d > 205 && d <= 231) return 0.145;
-    
-    return 0;
+  function isAdjacentToRoad(polygon: XY[], roadPolysList: XY[][], sScale: number): boolean {
+    if (roadPolysList.length === 0) return true;
+    const threshold = 45.0 * sScale; // 45 meters threshold
+    for (const pt of polygon) {
+      for (const roadPoly of roadPolysList) {
+        for (const rPt of roadPoly) {
+          const d = Math.hypot(pt.x - rPt.x, pt.y - rPt.y);
+          if (d <= threshold) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   }
 
-  function createParkingLot(prefix: string, rowDef: {tCenter: number}, dCenter: number, typology: LotTypology = "parking"): Lot {
-    const center = getBandPoint(innerBuffer, rowDef.tCenter, dCenter, scale);
-    const nextP = getBandPoint(innerBuffer, rowDef.tCenter, dCenter + 1, scale);
-    const angle = Math.atan2(nextP.y - center.y, nextP.x - center.x);
-    
-    // True Cartesian dimensions: 2.5m wide x 5m deep
+  function createParkingLot(
+    prefix: string,
+    t: number,
+    d: number,
+    idNum: number,
+    quadrant: string,
+    parking_type: string,
+    typology: LotTypology = "parking"
+  ): Lot {
+    const curved_d = getCurvedD(t, d);
+    const center = getBandPoint(innerBuffer, t, curved_d, scale);
+    const nextP  = getBandPoint(innerBuffer, t, curved_d + 1, scale);
+    const angle  = Math.atan2(nextP.y - center.y, nextP.x - center.x);
+
+    // True Cartesian 2.5m × 5.0m stall
     const wPx = (2.5 * scale) / 2;
     const dPx = (5.0 * scale) / 2;
-
-    const corners = [
-      { x: -wPx, y: -dPx },
-      { x:  wPx, y: -dPx },
-      { x:  wPx, y:  dPx },
-      { x: -wPx, y:  dPx },
-    ];
 
     const cosA = Math.cos(angle);
     const sinA = Math.sin(angle);
 
-    const polygon = corners.map(c => ({
+    const polygon = [
+      { x: -wPx, y: -dPx }, { x: wPx, y: -dPx },
+      { x:  wPx, y:  dPx }, { x: -wPx, y:  dPx },
+    ].map(c => ({
       x: center.x + c.x * cosA - c.y * sinA,
       y: center.y + c.x * sinA + c.y * cosA
     }));
-    
-    const idNum = parkingCount++;
+
+    const isPrivate = typology === "parking";
+    const pPrice = isPrivate ? 5000 : 0;
+    const pPriceLabel = isPrivate ? "S/ 5,000" : "Uso Común";
+    const pStatus = isPrivate ? "available" : "blocked";
+
     return {
       id: `P-${prefix}${idNum}`,
       number: `P${idNum}`,
       blockId: "PARKING",
-      typology: typology,
+      typology,
       areaM2: 12.5,
-      status: "available",
-      priceLabel: typology === "parking-external" ? "PÚBLICO" : "S/ 5,000",
-      price: typology === "parking-external" ? 0 : 5000,
-      polygon: polygon,
+      status: pStatus,
+      priceLabel: pPriceLabel,
+      price: pPrice,
+      polygon,
       dimensions: "2.5m x 5.0m",
-      quadrant: "PARKING",
+      quadrant,
       area: 12.5,
       elevation: 108,
       distanceToPool: 50,
-      hubDistance: 0
+      hubDistance: 0,
+      frontage: 2.5,
+      depth: 5.0,
+      price_soles: pPrice,
+      parking_type: parking_type as any,
+      walk_distance_parking_meters: 0,
+      walk_distance_oasis_meters: 50
     };
   }
 
-  function fillParkingStrips(dStart: number, dEnd: number, prefix: string) {
-    for (let d = dStart; d <= dEnd; d += 2.5) {
-      if (d % 20 > 15) continue; // Leave gaps for driveways
-      let currentT = 0.035; 
-      const boundaryT = getMaxTForD(d + 1.25) - 0.005; 
+  // ── Generate stalls arm-by-arm with collision mask ────────────────────────
+  const generatedAllParkingPolys: XY[][] = [];
+  for (const hub of hubs) {
+    let count = 0;
+    const TARGET_PER_HUB = 65;
 
-      while (currentT <= boundaryT) {
-         const p1 = createParkingLot(prefix, {tCenter: currentT}, d + 1.25);
-         if (!checkCollision(p1.polygon, obstacles)) lots.push(p1);
-         
-         // Aisle of 6.5 meters between rows facing each other (0.018 in t-space + 2 half spots = 0.032)
-         let nextT = currentT + 0.032; 
-         if (nextT <= boundaryT) {
-            const p2 = createParkingLot(prefix, {tCenter: nextT}, d + 1.25);
-            if (!checkCollision(p2.polygon, obstacles)) lots.push(p2);
-         }
+    // Arm 1 — long arm
+    const arm1 = hub.arm1;
+    const a1_cols = Math.floor((arm1.dEnd - arm1.dStart) / 2.8); // ~2.8m spacing = 2.5m stall + 0.3m gap
+    for (let row = 0; row < arm1.rows && count < TARGET_PER_HUB; row++) {
+      const t_row = arm1.tStart + row * (arm1.tEnd - arm1.tStart) / Math.max(arm1.rows - 1, 1);
+      for (let col = 0; col < a1_cols && count < TARGET_PER_HUB; col++) {
+        const d_col = arm1.dStart + col * (arm1.dEnd - arm1.dStart) / Math.max(a1_cols - 1, 1);
+        const p = createParkingLot(hub.prefix, t_row, d_col, parkingCount, hub.quadrant, hub.parking_type, hub.typology);
+        
+        // ── Inside innerBuffer boundary check ──────────────────────────────
+        const inside = p.polygon.every(pt => isPointInPolygon(pt, innerBuffer));
+        if (!inside) continue;
 
-         // Back to back gap of 0 meters between blocks (0.014 in t-space)
-         currentT = nextT + 0.014; 
+        // ── Connectivity check: must not be isolated ────────────────────────
+        if (!isAdjacentToRoad(p.polygon, roadPolys, scale)) continue;
+
+        // ── Collision mask: external obstacles + already placed hub stalls ──
+        const allObstacles = obstacles.length > 0 ? [...obstacles, ...generatedAllParkingPolys] : generatedAllParkingPolys;
+        if (allObstacles.length === 0 || !checkCollision(p.polygon, allObstacles, 0.05)) {
+          assertInsidePerimeter(p.polygon, p.id); // Regla A / Phase A
+          generatedAllParkingPolys.push(p.polygon);
+          lots.push(p);
+          parkingCount++; // Increment only on success!
+          count++;
+        }
+      }
+    }
+
+    // Arm 2 — short fold arm (L-shape articulation)
+    const arm2 = hub.arm2;
+    if (arm2) {
+      const a2_cols = Math.floor((arm2.dEnd - arm2.dStart) / 2.8);
+      for (let row = 0; row < arm2.rows && count < TARGET_PER_HUB; row++) {
+        const t_row = arm2.tStart + row * (arm2.tEnd - arm2.tStart) / Math.max(arm2.rows - 1, 1);
+        for (let col = 0; col < a2_cols && count < TARGET_PER_HUB; col++) {
+          const d_col = arm2.dStart + col * (arm2.dEnd - arm2.dStart) / Math.max(a2_cols - 1, 1);
+          const p = createParkingLot(hub.prefix, t_row, d_col, parkingCount, hub.quadrant, hub.parking_type, hub.typology);
+          
+          // ── Inside innerBuffer boundary check ──────────────────────────────
+          const inside = p.polygon.every(pt => isPointInPolygon(pt, innerBuffer));
+          if (!inside) continue;
+  
+          // ── Connectivity check: must not be isolated ────────────────────────
+          if (!isAdjacentToRoad(p.polygon, roadPolys, scale)) continue;
+  
+          // ── Collision mask: external obstacles + already placed hub stalls ──
+          const allObstacles2 = obstacles.length > 0 ? [...obstacles, ...generatedAllParkingPolys] : generatedAllParkingPolys;
+          if (allObstacles2.length === 0 || !checkCollision(p.polygon, allObstacles2, 0.05)) {
+            assertInsidePerimeter(p.polygon, p.id); // Regla A / Phase A
+            generatedAllParkingPolys.push(p.polygon);
+            lots.push(p);
+            parkingCount++; // Increment only on success!
+            count++;
+          }
+        }
       }
     }
   }
-
-  // Left side internal parking block: clear of entrance (d=15 to 92.5)
-  fillParkingStrips(15, 92.5, "L1-");
-
-  // Right side internal parking block: safe after d=137.5
-  fillParkingStrips(137.5, 225, "R");
-
-  // External Visitor Parking (setback outside front wall)
-  let extCount = 0;
-  function fillExternalParking(dStart: number, dEnd: number, prefix: string) {
-    for (let d = dStart; d <= dEnd; d += 2.5) {
-      extCount++;
-      const p = createParkingLot(prefix, {tCenter: -0.012}, d + 1.25, "parking-external");
-      if (!checkCollision(p.polygon, obstacles)) lots.push(p);
-    }
-  }
-
-  // Add external visitor parking along the setback
-  fillExternalParking(15, 90, "EXT-L-");
-  fillExternalParking(135, 215, "EXT-R-");
-
-  console.log(`Generated ${extCount} external visitor parking spots outside the wall.`);
 
   return lots;
 }

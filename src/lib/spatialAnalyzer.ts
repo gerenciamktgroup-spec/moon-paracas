@@ -1,7 +1,7 @@
 import { XY } from "../types/map";
 import * as turf from "@turf/turf";
-import { centroid } from "./geometry";
-import { getMeterToSvgScale } from "./terrainModel";
+import { centroid, isPointInPolygon } from "./geometry";
+import { getMeterToSvgScale, buildTerrainScene } from "./terrainModel";
 
 /**
  * Helper to convert an XY array to a Turf Polygon geometry.
@@ -125,5 +125,17 @@ export function checkCollision(candidate: XY[], obstacles: XY[][], shrinkM = 0.1
   } catch (err) {
     console.warn("checkCollision failed, assuming collision to be safe", err);
     return true; 
+  }
+}
+
+/**
+  * Assertion that throws if any vertex of the polygon is outside the legal terrain boundary.
+  */
+export function assertInsidePerimeter(polygon: XY[], label: string) {
+  const { terrain } = buildTerrainScene();
+  for (const pt of polygon) {
+    if (!isPointInPolygon(pt, terrain)) {
+      throw new Error(`PERIMETER VIOLATION: Polygon for ${label} has a vertex (${pt.x.toFixed(2)}, ${pt.y.toFixed(2)}) outside the legal terrain perimeter.`);
+    }
   }
 }

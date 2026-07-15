@@ -65,8 +65,8 @@ export const ArchitecturalRecommendations = () => {
             <div className="w-full lg:w-1/2">
               <div className="grid grid-cols-2 gap-4">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="bg-slate-200 rounded-xl aspect-[4/3] flex items-center justify-center overflow-hidden shadow-md">
-                    <span className="text-slate-400 font-medium">[Contenedor Imagen {i}]</span>
+                  <div key={i} className="bg-slate-200 rounded-xl aspect-[4/3] flex items-center justify-center overflow-hidden shadow-md group">
+                    <img src={`/media/container_${i}.jpeg`} alt={`Casa Contenedor Rústica ${i}`} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                   </div>
                 ))}
               </div>

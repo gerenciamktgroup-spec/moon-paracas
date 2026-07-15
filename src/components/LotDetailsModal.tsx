@@ -1,13 +1,32 @@
 import React, { useState, useEffect } from "react";
 import { Lot } from "../types/map";
-import { Compass, Calendar, ShieldCheck, SunDim, Landmark, RefreshCw, Layers } from "lucide-react";
+import { 
+  Compass, Calendar, ShieldCheck, SunDim, Landmark, RefreshCw, Layers,
+  User, Mail, Phone, Lock, ChevronLeft, FileText 
+} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
 
 interface LotDetailsProps {
   lot: Lot | null;
-  onReserve: (lotId: string) => void;
+  onReserve: (lotId: string, clientData: { 
+    name: string; 
+    dni: string; 
+    email: string; 
+    phone: string;
+    monthlyAmount: number;
+    installmentsCount: number;
+    isCash: boolean;
+  }) => void;
 }
+
+// Global helper for clean money formatting in Peruvian Soles (always 2 decimals)
+const formatMoney = (value: number): string => {
+  return "S/ " + value.toLocaleString("es-PE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
 
 export const LotDetailsModal: React.FC<LotDetailsProps> = ({ lot, onReserve }) => {
   // Financial calculation parameters
@@ -15,29 +34,45 @@ export const LotDetailsModal: React.FC<LotDetailsProps> = ({ lot, onReserve }) =
   const [financingMonths, setFinancingMonths] = useState<number>(12);
   const [separationFee] = useState<number>(1000); // S/ 1,000 fixed separation fee
 
-  // Reset calculations on lot change
+  // Reservation Form states
+  const [showReservationForm, setShowReservationForm] = useState(false);
+  const [clientName, setClientName] = useState("");
+  const [clientDni, setClientDni] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
+
+  // Reset calculations and form on lot change
   useEffect(() => {
     setDownpaymentPercentage(30);
     setFinancingMonths(12);
+    setShowReservationForm(false);
+    setClientName("");
+    setClientDni("");
+    setClientEmail("");
+    setClientPhone("");
   }, [lot]);
 
   if (!lot) {
     return (
       <motion.div 
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="flex flex-col items-center justify-center p-8 text-center h-full border-2 border-dashed border-stone-300 rounded-none bg-stone-50 shadow-sm min-h-[580px]"
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col items-center justify-center p-8 text-center h-full border border-dashed border-white/10 rounded-2xl bg-[#1D1714]/30 shadow-2xl min-h-[300px] backdrop-blur-md"
       >
-        <Compass className="h-10 w-10 text-[#C4A484] mb-3 animate-spin" style={{ animationDuration: "14s" }} />
-        <h3 className="font-display font-bold text-[#2D3339] uppercase tracking-wider text-xl mt-3">Analiza el Emplazamiento</h3>
-        <p className="text-sm text-stone-600 mt-2 max-w-[280px] leading-relaxed">
-          Haz clic en cualquier parcela del mapa para inspeccionar sus características técnicas, orientación y proyectar su estructura de inversión.
+        <Compass className="h-8 w-8 text-[#E2725B] mb-4 animate-spin" style={{ animationDuration: "20s" }} />
+        <h3 className="font-display font-medium text-white uppercase tracking-wider text-lg">Descubre tu Refugio en la Roca</h3>
+        <p className="text-xs text-[#E1D9C1]/70 mt-2.5 max-w-[420px] leading-relaxed font-sans font-light">
+          Selecciona una parcela exclusiva en el Masterplan interactivo de arriba para explorar sus características técnicas, orientación solar y diseñar una estructura de inversión patrimonial a tu medida.
         </p>
       </motion.div>
     );
   }
 
-  // Financial calculations
+  const isParking = lot.typology === "parking" || lot.typology === "parking-external";
+  const isExternalParking = lot.typology === "parking-external";
+  const isPrivateParking = lot.typology === "parking";
+
+  // Financial calculations (only used for residential lots)
   const totalPrice = lot.price;
   const rawDownpayment = (totalPrice * downpaymentPercentage) / 100;
   const downpaymentToPay = Math.max(0, rawDownpayment - separationFee);
@@ -59,6 +94,137 @@ export const LotDetailsModal: React.FC<LotDetailsProps> = ({ lot, onReserve }) =
     fee: adminFeeMonthly,
   }));
 
+  // Render Reservation Form view if open
+  if (showReservationForm) {
+    return (
+      <AnimatePresence mode="wait">
+        <motion.div 
+          key="reservation-form"
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -15 }}
+          transition={{ duration: 0.3 }}
+          className="flex flex-col gap-4 sm:gap-6 rounded-2xl border border-white/10 bg-[#1D1714]/90 backdrop-blur-xl p-5 sm:p-6 shadow-2xl transition-all duration-300 min-h-[500px] text-[#E1D9C1]"
+        >
+          {/* Header */}
+          <div className="flex items-center gap-3 border-b pb-4 border-white/10">
+            <button
+              onClick={() => setShowReservationForm(false)}
+              className="p-2 hover:bg-white/5 border border-white/10 text-white transition-all cursor-pointer rounded-xl"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <div>
+              <h3 className="font-display text-lg font-bold text-white uppercase tracking-wider">
+                Formulario de Reserva
+              </h3>
+              <p className="text-[10px] text-[#E2725B] font-bold font-mono mt-0.5">
+                {isPrivateParking ? `Cochera ${lot.id.split("-")[1]}` : `Lote ${lot.id.split("-")[1]}`} ({lot.quadrant}) • {formatMoney(separationFee)}
+              </p>
+            </div>
+          </div>
+
+          <p className="text-[11px] text-[#E1D9C1]/80 leading-relaxed font-sans font-light">
+            Completa tus datos personales para registrar la reserva de tu lote en Moon Paracas. Serás redirigido de forma segura a Mercado Pago para realizar el depósito de S/ 1,000 en garantía.
+          </p>
+
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!clientName || !clientDni || !clientEmail || !clientPhone) {
+                alert("Por favor, completa todos los campos del formulario.");
+                return;
+              }
+              onReserve(lot.id, {
+                name: clientName,
+                dni: clientDni,
+                email: clientEmail,
+                phone: clientPhone,
+                monthlyAmount: downpaymentPercentage < 100 ? monthlyPayment : 0,
+                installmentsCount: downpaymentPercentage < 100 ? financingMonths : 0,
+                isCash: downpaymentPercentage === 100
+              });
+            }}
+            className="space-y-4 flex-1 flex flex-col justify-between"
+          >
+            <div className="space-y-3.5">
+              {/* Name */}
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-wider text-[#E1D9C1]/60 font-bold font-mono flex items-center gap-1.5">
+                  <User className="h-3.5 w-3.5 text-[#E2725B]" /> Nombre Completo
+                </label>
+                <input 
+                  type="text"
+                  required
+                  placeholder="Ej. Carlos Mendoza Quiroga"
+                  value={clientName}
+                  onChange={(e) => setClientName(e.target.value)}
+                  className="w-full bg-black/30 border border-white/10 p-3 text-xs text-white rounded-xl focus:outline-none focus:border-[#E2725B] transition-all font-sans font-light"
+                />
+              </div>
+
+              {/* DNI */}
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-wider text-[#E1D9C1]/60 font-bold font-mono flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5 text-[#E2725B]" /> Documento de Identidad (DNI / RUC)
+                </label>
+                <input 
+                  type="text"
+                  required
+                  placeholder="Ej. 70451829"
+                  value={clientDni}
+                  onChange={(e) => setClientDni(e.target.value)}
+                  className="w-full bg-black/30 border border-white/10 p-3 text-xs text-white rounded-xl focus:outline-none focus:border-[#E2725B] transition-all font-sans font-light"
+                />
+              </div>
+
+              {/* Email */}
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-wider text-[#E1D9C1]/60 font-bold font-mono flex items-center gap-1.5">
+                  <Mail className="h-3.5 w-3.5 text-[#E2725B]" /> Correo Electrónico
+                </label>
+                <input 
+                  type="email"
+                  required
+                  placeholder="carlos@ejemplo.com"
+                  value={clientEmail}
+                  onChange={(e) => setClientEmail(e.target.value)}
+                  className="w-full bg-black/30 border border-white/10 p-3 text-xs text-white rounded-xl focus:outline-none focus:border-[#E2725B] transition-all font-sans font-light"
+                />
+              </div>
+
+              {/* Phone */}
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase tracking-wider text-[#E1D9C1]/60 font-bold font-mono flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5 text-[#E2725B]" /> Teléfono Celular
+                </label>
+                <input 
+                  type="tel"
+                  required
+                  placeholder="Ej. 987654321"
+                  value={clientPhone}
+                  onChange={(e) => setClientPhone(e.target.value)}
+                  className="w-full bg-black/30 border border-white/10 p-3 text-xs text-white rounded-xl focus:outline-none focus:border-[#E2725B] transition-all font-sans font-light"
+                />
+              </div>
+            </div>
+
+            {/* CTA Submit */}
+            <div className="pt-4 border-t border-white/10 mt-4">
+              <button
+                type="submit"
+                className="w-full bg-[#E2725B] text-white font-medium text-xs tracking-widest uppercase py-4 hover:bg-[#e3826d] transition-all shadow-[0_0_15px_rgba(226,114,91,0.2)] rounded-xl active:translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Lock className="h-4 w-4" /> Proceder al Pago con Mercado Pago
+              </button>
+            </div>
+          </form>
+        </motion.div>
+      </AnimatePresence>
+    );
+  }
+
+  // Render normal specifications and calculations view
   return (
     <AnimatePresence mode="wait">
       <motion.div 
@@ -67,238 +233,354 @@ export const LotDetailsModal: React.FC<LotDetailsProps> = ({ lot, onReserve }) =
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -15 }}
         transition={{ duration: 0.3 }}
-        className="flex flex-col gap-6 rounded-none border border-stone-200 bg-white p-6 shadow-sm transition-all duration-300 min-h-[580px]"
+        className="rounded-2xl border border-white/10 bg-[#1D1714]/80 backdrop-blur-xl p-5 sm:p-6 shadow-2xl transition-all duration-300 text-[#E1D9C1]"
       >
-        {/* Target Lot Title & Sector Info */}
-        <div className="flex items-start justify-between border-b pb-4 border-[#2D3339]/10">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className={`inline-block rounded-none px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider border ${
-                lot.status === "available" ? "bg-[#A3B18A] text-[#2D3339] border-[#7C8D65]" :
-                lot.status === "offer" ? "bg-[#E0B084] text-[#2D3339] border-[#BF8D61]" :
-                "bg-[#F2ECE4] text-[#2D3339] border-[#D4CCB8]"
-              }`}>
-                {lot.status}
-              </span>
-              <span className="text-sm text-stone-500 font-bold">ID: {lot.id}</span>
-            </div>
-            <h3 className="font-display text-2xl font-black text-[#2D3339] mt-2 uppercase">
-              Lote {lot.id.split("-")[1]} <span className="font-light text-[#C4A484]">({lot.quadrant})</span>
-            </h3>
-            <p className="text-sm text-stone-600 mt-0.5">
-              Elevación Topo: <span className="text-[#C4A484] font-bold">{lot.elevation}m s.n.m</span>
-            </p>
-          </div>
-
-          {/* Price tag */}
-          <div className="text-right">
-            <p className="text-xs font-bold text-stone-500 uppercase tracking-widest">Precio Adjudicado</p>
-            <p className="font-display text-2xl font-black text-[#2D3339]">
-              S/ {totalPrice.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-            </p>
-            <p className="text-xs text-stone-500 mt-1">~ S/ {Math.round(totalPrice / lot.area).toLocaleString('es-PE')} / m²</p>
-          </div>
-        </div>
-
-        {/* Technical Specifications Block (Architect/Engineer details) */}
-        <div className="grid grid-cols-2 gap-4 bg-stone-50 rounded-none p-4 border border-stone-200">
-          <div className="space-y-1">
-            <span className="text-xs font-bold text-stone-500 uppercase tracking-widest flex items-center gap-1">
-              <Layers className="h-4 w-4 text-[#2D3339]" /> Área Lote
-            </span>
-            <p className="font-bold text-[#2D3339] text-base">{lot.area.toFixed(2)} m²</p>
-            {lot.dimensions ? (
-              <p className="text-[11px] text-stone-500 font-mono mt-2.5 leading-relaxed">
-                Frente: {lot.dimensions.split(" x ")[0]} <br/>
-                Fondo: {lot.dimensions.split(" x ")[1]}
-              </p>
-            ) : (
-              <p className="text-[11px] text-stone-500 font-mono mt-2.5 leading-relaxed">
-                Frente: 10.00m <br/>
-                Fondo: {(lot.area / 10).toFixed(2)}m
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-1">
-            <span className="text-xs font-bold text-stone-500 uppercase tracking-widest flex items-center gap-1">
-              <SunDim className="h-4 w-4 text-[#C4A484]" /> Radiación Solar
-            </span>
-            <p className="font-bold text-[#2D3339] text-base">
-              {peakSolarHours} <span className="text-xs font-normal">kWh/m²/día</span>
-            </p>
-          </div>
-
-          <div className="space-y-1 pt-2 border-t border-stone-200">
-            <span className="text-xs font-bold text-stone-500 uppercase tracking-widest flex items-center gap-1">
-              <Compass className="h-4 w-4 text-[#A3B18A]" /> Oasis Central
-            </span>
-            <p className="font-bold text-[#2D3339] text-base">~ {lot.distanceToPool} m</p>
-          </div>
-
-          <div className="space-y-1 pt-2 border-t border-stone-200">
-            <span className="text-xs font-bold text-stone-500 uppercase tracking-widest flex items-center gap-1">
-              <Layers className="h-4 w-4 text-[#E15A42]" /> Estacionamiento
-            </span>
-            <p className="font-bold text-[#E15A42] text-base">
-              ~ {lot.hubDistance} m <span className="text-xs text-stone-500 font-normal">({Math.round(lot.hubDistance / 72)} min a pie)</span>
-            </p>
-          </div>
-        </div>
-
-        {/* Interactive Financial Simulator */}
-        <div className="border border-stone-200 bg-white rounded-none p-4 space-y-3.5">
-          <div className="flex items-center justify-between border-b pb-3 border-stone-100">
-            <h4 className="font-display text-sm font-bold uppercase tracking-wider text-[#2D3339] flex items-center gap-2">
-              <Landmark className="h-5 w-5 text-[#C4A484]" /> Simulador de Estructura de Capital
-            </h4>
-            <span className="rounded-none bg-[#6B8E23] px-2 py-0.5 text-xs font-bold text-white uppercase tracking-widest">
-              Sin Intereses
-            </span>
-          </div>
-
-          {/* Input: Downpayment % slider */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-stone-600 font-bold leading-relaxed">Cuota Inicial ({downpaymentPercentage}%)</span>
-              <span className="font-bold text-[#2D3339]">S/ {rawDownpayment.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-            </div>
-            <input
-              type="range"
-              min="10"
-              max="100"
-              step="5"
-              className="w-full accent-[#C4A484] h-2.5 cursor-pointer bg-stone-200 mt-2"
-              value={downpaymentPercentage}
-              onChange={(e) => setDownpaymentPercentage(parseInt(e.target.value))}
-            />
-            <div className="flex justify-between text-[11px] text-stone-500 pt-1 px-1">
-              <span>10% (Mínimo)</span>
-              <span>30% (Sugerido)</span>
-              <span>100% (Contado)</span>
-            </div>
-          </div>
-
-          {/* Input: Financing Months select */}
-          <div className="space-y-1.5 font-mono">
-            <label className="text-xs text-stone-600 font-bold flex items-center justify-between">
-              <span>Plazo Mensual</span>
-              <span className="font-bold text-[#C4A484]">{financingMonths} meses</span>
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {[6, 12, 18].map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setFinancingMonths(m)}
-                  disabled={downpaymentPercentage === 100}
-                  className={`py-1.5 rounded-none text-xs font-bold font-mono border-2 transition-all ${
-                    downpaymentPercentage === 100
-                      ? "opacity-30 cursor-not-allowed bg-stone-100 border-stone-200 text-stone-400"
-                      : financingMonths === m
-                      ? "bg-[#2D3339] border-[#2D3339] text-white"
-                      : "bg-white border-[#2D3339] text-[#2D3339] hover:bg-[#F4F4F1]"
-                  }`}
-                >
-                  {m}m
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Recharts Visualization */}
-          {downpaymentPercentage < 100 && (
-            <div className="h-32 mt-4 cursor-crosshair">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} margin={{ top: 0, right: 0, left: -25, bottom: 15 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E5E5" />
-                  <XAxis 
-                    dataKey="name" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fontSize: 8, fill: '#888' }} 
-                    height={20} 
-                    angle={-30} 
-                    textAnchor="end" 
-                  />
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fill: '#888' }} width={80} tickMargin={8} tickFormatter={(value) => `S/ ${value.toLocaleString()}`} />
-                  <RechartsTooltip 
-                    cursor={{fill: 'transparent'}}
-                    contentStyle={{ borderRadius: '0px', border: '2px solid #2D3339', fontSize: '10px', fontWeight: 'bold', fontFamily: 'monospace' }}
-                    formatter={(value: number) => `S/ ${value.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`}
-                  />
-                  <Bar dataKey="base" stackId="a" fill="#C4A484" />
-                  <Bar dataKey="fee" stackId="a" fill="#2D3339" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-
-          {/* Financial Projection Output */}
-          <div className="bg-[#F4F4F1] rounded-none p-3 border-2 border-dashed border-[#2D3339]/40 space-y-2 text-xs">
-            <div className="flex items-center justify-between text-stone-700">
-              <span>Separación hoy:</span>
-              <span className="font-bold">S/ {separationFee.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-            </div>
-            <div className="flex items-center justify-between text-stone-700">
-              <span>Inicial firma contrato:</span>
-              <span className="font-bold text-[#2D3339]">
-                S/ {downpaymentToPay.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-              </span>
-            </div>
-            {downpaymentPercentage < 100 ? (
-              <>
-                <div className="flex items-center justify-between text-stone-700">
-                  <span>Monto a financiar:</span>
-                  <span className="text-[#2D3339] font-bold">S/ {remainingFinanced.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+        {isParking ? (
+          /* Simple layout for parking lots since they have no financing */
+          <div className="flex flex-col md:flex-row gap-6 items-stretch text-left">
+            <div className="flex-1 flex flex-col justify-between gap-4 bg-black/20 rounded-xl p-5 border border-white/5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-block rounded-full px-3 py-0.5 text-[9px] font-bold uppercase tracking-widest border bg-stone-700 text-stone-200 border-stone-600 font-mono">
+                    {isExternalParking ? "Uso Común" : "Propiedad Privada"}
+                  </span>
+                  <span className="text-[10px] text-[#E1D9C1]/60 font-bold font-mono">ID: {lot.id}</span>
                 </div>
-                <div className="flex justify-between items-center text-stone-700 pt-2 border-t border-[#2D3339]/10">
-                  <span className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-[#C4A484]" />Cuota base mensual:</span>
-                  <span>S/ {baseMonthly.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                </div>
-                <div className="flex justify-between items-center text-stone-700 pb-2">
-                  <span className="flex items-center gap-2"><div className="w-2.5 h-2.5 bg-[#2D3339]" />Gastos admin. (5% Pasarela):</span>
-                  <span>S/ {adminFeeMonthly.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
-                </div>
-                <p className="text-[11px] text-stone-600 font-medium italic pb-1.5 text-center leading-relaxed">
-                  *El gasto adm. del 5% cubre las comisiones de la pasarela de pagos (tarjetas crédito/débito) para la suscripción de cobro recurrente.
+                <h3 className="font-display text-2xl font-normal text-white mt-3 uppercase tracking-wide">
+                  {lot.typology === "parking" ? "Cochera Plus" : "Cochera Visitas"} <span className="font-light text-[#E2725B]">({lot.quadrant})</span>
+                </h3>
+                <p className="text-xs text-[#E1D9C1]/80 mt-1 font-sans font-light">
+                  Elevación Topográfica: <span className="text-[#E2725B] font-bold">{lot.elevation}m s.n.m</span>
                 </p>
-                <div className="flex items-center justify-between font-bold border-t border-dashed border-[#2D3339]/20 pt-3 text-sm text-[#2D3339]">
-                  <span className="flex items-center gap-1.5 uppercase tracking-wide">
-                    <Calendar className="h-5 w-5 text-[#C4A484]" /> {financingMonths} Cuotas de:
-                  </span>
-                  <span className="font-display font-black text-xl text-[#2D3339]">
-                    S/ {monthlyPayment.toLocaleString('es-PE', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
-                  </span>
-                </div>
-              </>
-            ) : (
-              <div className="font-bold border-t border-dashed border-[#2D3339]/20 pt-3 text-sm text-[#6B8E23] text-center uppercase tracking-wider">
-                🎉 ¡Bono de Pago al Contado (100%) Aplicado!
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* CTA Reservation Button */}
-        {lot.status === "available" ? (
-          <button
-            onClick={() => onReserve(lot.id)}
-            className="w-full rounded-none bg-[#C4A484] border-2 border-[#2D3339] py-4 text-sm font-bold text-[#2D3339] hover:bg-white transition-all uppercase tracking-widest flex items-center justify-center gap-2 shadow-[4px_4px_0px_#2D3339] active:translate-y-1 active:shadow-[0px_0px_0px_#2D3339]"
-          >
-            <Landmark className="h-5 w-5" /> Separar Lote con S/ 1,000
-          </button>
+              <div className="grid grid-cols-2 gap-3.5 bg-black/30 rounded-xl p-4 border border-white/5">
+                <div className="space-y-1">
+                  <span className="text-[9px] font-bold text-[#E1D9C1]/60 uppercase tracking-widest flex items-center gap-1.5 font-mono">
+                    <Layers className="h-3.5 w-3.5 text-[#E1D9C1]/80" /> Dimensiones
+                  </span>
+                  <p className="font-semibold text-white text-sm mt-0.5">{lot.dimensions}</p>
+                  <p className="text-[10px] text-stone-400 font-mono mt-1">Área: {lot.area.toFixed(2)} m²</p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[9px] font-bold text-[#E1D9C1]/60 uppercase tracking-widest flex items-center gap-1.5 font-mono">
+                    <SunDim className="h-3.5 w-3.5 text-[#E2725B]" /> Tipo
+                  </span>
+                  <p className="font-semibold text-white text-sm mt-0.5">
+                    {lot.typology === "parking" ? "Techado Solar" : "Acceso Público"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="border-t border-white/5 pt-4 flex items-center justify-between">
+                <div>
+                  <p className="text-[9px] font-bold text-[#E1D9C1]/60 uppercase tracking-widest font-mono font-medium">Inversión</p>
+                  <p className="font-display text-2xl font-semibold text-white mt-1">
+                    {isExternalParking ? "S/ 0.00" : formatMoney(totalPrice)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full md:w-[350px] flex flex-col justify-center gap-4 bg-black/10 rounded-xl p-5 border border-white/5 text-center">
+              <p className="text-xs text-stone-400 font-light leading-relaxed mb-2 font-sans">
+                {isExternalParking 
+                  ? "Esta cochera forma parte de las áreas comunes de libre acceso para visitantes y propietarios en las zonas de ingreso."
+                  : "Adquiere una cochera de uso exclusivo con paneles solares de carga autónoma para vehículos eléctricos y buggies."}
+              </p>
+              {isExternalParking ? (
+                <button
+                  disabled
+                  className="w-full rounded-xl bg-stone-800 text-stone-500 py-3.5 text-xs font-bold uppercase tracking-widest cursor-not-allowed border border-white/5"
+                >
+                  Área Común
+                </button>
+              ) : lot.status === "available" || lot.status === "offer" ? (
+                <button
+                  onClick={() => setShowReservationForm(true)}
+                  className="w-full bg-[#E2725B] text-white font-medium text-xs tracking-widest uppercase py-3.5 hover:bg-[#d85e45] hover:-translate-y-0.5 rounded-xl transition-all shadow-lg active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Lock className="h-3.5 w-3.5" /> Separar Cochera con S/ 1,000
+                </button>
+              ) : (
+                <button
+                  disabled
+                  className="w-full rounded-xl bg-stone-800 text-stone-500 py-3.5 text-xs font-bold cursor-not-allowed border border-white/5 uppercase tracking-widest"
+                >
+                  No disponible
+                </button>
+              )}
+            </div>
+          </div>
         ) : (
-          <button
-            disabled
-            className="w-full rounded-none bg-stone-200 text-stone-400 py-4 text-sm font-bold cursor-not-allowed border-2 border-stone-300 uppercase tracking-widest"
-          >
-            No disponible para separación
-          </button>
+          /* Redesigned 2-column wide layout for residential lots (map-bottom format) */
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch text-left font-sans">
+            
+            {/* Left Card: Lot specs, details and price */}
+            <div className="lg:col-span-5 flex flex-col justify-between gap-5 bg-black/20 rounded-xl p-5 border border-white/5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className={`inline-block rounded-full px-3 py-0.5 text-[9px] font-bold uppercase tracking-widest border ${
+                    lot.status === "available" ? "bg-[#E1D9C1]/10 text-[#E1D9C1] border-[#E1D9C1]/30" :
+                    lot.status === "offer" ? "bg-[#E2725B]/10 text-[#E2725B] border-[#E2725B]/30" :
+                    "bg-[#382B23] text-stone-300 border-[#382B23]"
+                  }`}>
+                    {lot.status === "available" ? "Fase Fundadora" : lot.status === "offer" ? "Bono Especial" : lot.status === "sold" ? "Familia Fundadora" : "Bloqueado"}
+                  </span>
+                  <span className="text-[10px] text-stone-500 font-bold font-mono">ID: {lot.id}</span>
+                </div>
+                
+                <h3 className="font-display text-2xl font-normal text-white mt-3.5 uppercase tracking-wide">
+                  Lote {lot.id.split("-")[1]} <span className="font-light text-[#E2725B]">({lot.quadrant})</span>
+                </h3>
+                
+                <p className="text-xs text-stone-400 mt-1 font-sans font-light">
+                  Elevación Topográfica: <span className="text-[#E2725B] font-semibold">{lot.elevation}m s.n.m</span> (Inmune a Maremotos)
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3.5 bg-black/35 rounded-xl p-4 border border-white/5">
+                <div className="space-y-1">
+                  <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest flex items-center gap-1.5 font-mono">
+                    <Layers className="h-3.5 w-3.5 text-[#E1D9C1]/80" /> Área Privada
+                  </span>
+                  <p className="font-semibold text-white text-sm mt-0.5">{lot.area.toFixed(2)} m²</p>
+                  <p className="text-[9.5px] text-stone-500 font-mono mt-2 leading-relaxed">
+                    Frente: {lot.frontage?.toFixed(2)}m <br/>
+                    Fondo: {lot.depth?.toFixed(2)}m
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest flex items-center gap-1.5 font-mono">
+                    <SunDim className="h-3.5 w-3.5 text-[#E2725B]" /> Eco-Solar
+                  </span>
+                  <p className="font-semibold text-white text-sm mt-0.5">
+                    {peakSolarHours} <span className="text-[10px] font-normal text-stone-400">kWh/m²/d</span>
+                  </p>
+                </div>
+
+                <div className="space-y-1 pt-2.5 border-t border-white/5">
+                  <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest flex items-center gap-1.5 font-mono">
+                    <Compass className="h-3.5 w-3.5 text-[#E1D9C1]/80" /> Cercanía Oasis
+                  </span>
+                  <p className="font-semibold text-white text-sm mt-0.5">~ {lot.walk_distance_oasis_meters} m</p>
+                </div>
+
+                <div className="space-y-1 pt-2.5 border-t border-white/5">
+                  <span className="text-[9px] font-bold text-stone-400 uppercase tracking-widest flex items-center gap-1.5 font-mono">
+                    <Layers className="h-3.5 w-3.5 text-[#E2725B]" /> Acceso Parking
+                  </span>
+                  <p className="font-semibold text-[#E2725B] text-sm mt-0.5">
+                    ~ {lot.walk_distance_parking_meters} m <span className="text-[8px] text-stone-500 font-normal">({lot.parking_type === "externo_ingreso" ? "Ingr." : "Int."})</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="border-t border-white/5 pt-4 flex items-center justify-between">
+                <div>
+                  <p className="text-[9px] font-bold text-stone-500 uppercase tracking-widest font-mono">Inversión Patrimonial</p>
+                  <p className="font-display text-2xl font-normal text-white mt-1">
+                    {formatMoney(totalPrice)}
+                  </p>
+                </div>
+                <p className="text-[10px] text-stone-400 font-mono bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg">
+                  ~ {formatMoney(Math.round(totalPrice / lot.area))} / m²
+                </p>
+              </div>
+            </div>
+
+            {/* Right Card: Financial Simulator, chart and breakdown receipt */}
+            <div className="lg:col-span-7 bg-[#1D1714]/40 border border-white/5 rounded-xl p-5 sm:p-6 flex flex-col justify-between gap-5">
+              <div className="flex items-center justify-between border-b pb-3 border-white/5">
+                <h4 className="font-display text-sm font-normal uppercase tracking-wider text-white flex items-center gap-2">
+                  <Landmark className="h-4 w-4 text-[#E2725B]" /> Simulación de Financiamiento Directo
+                </h4>
+                <span className="rounded-full bg-[#E2725B]/10 border border-[#E2725B]/20 px-3 py-0.5 text-[9px] font-bold text-[#E2725B] uppercase tracking-widest font-mono">
+                  100% Sin Intereses
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 flex-1 items-stretch">
+                {/* Inputs & Graph Column */}
+                <div className="flex flex-col justify-between gap-4">
+                  {/* Slider Downpayment */}
+                  <div className="space-y-1.5 bg-black/20 p-3.5 rounded-xl border border-white/5">
+                    <div className="flex items-center justify-between text-xs font-sans">
+                      <span className="text-[#E1D9C1]/90 font-medium">Cuota Inicial ({downpaymentPercentage}%)</span>
+                      <span className="font-bold text-white font-mono">{formatMoney(rawDownpayment)}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="10"
+                      max="100"
+                      step="5"
+                      className="w-full accent-[#E2725B] h-1.5 cursor-pointer bg-stone-900 rounded-lg appearance-none"
+                      value={downpaymentPercentage}
+                      onChange={(e) => setDownpaymentPercentage(parseInt(e.target.value))}
+                    />
+                    <div className="flex justify-between text-[8px] text-stone-500 font-mono">
+                      <span>10% Mín</span>
+                      <span>30% Sug</span>
+                      <span>100% Contado</span>
+                    </div>
+                  </div>
+
+                  {/* Month selection buttons */}
+                  <div className="space-y-1.5">
+                    <label className="text-[9.5px] uppercase tracking-wider text-[#E1D9C1]/70 font-bold flex items-center justify-between font-mono">
+                      <span>Plan de Aportes</span>
+                      <span className="font-bold text-[#E2725B]">{financingMonths} meses</span>
+                    </label>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {[6, 12, 18, 24].map((m) => (
+                        <button
+                          key={m}
+                          onClick={() => setFinancingMonths(m)}
+                          disabled={downpaymentPercentage === 100}
+                          className={`py-2 rounded-lg text-xs font-bold font-mono border transition-all cursor-pointer ${
+                            downpaymentPercentage === 100
+                              ? "opacity-20 cursor-not-allowed bg-transparent border-white/5 text-stone-600"
+                              : financingMonths === m
+                              ? "bg-[#E2725B]/20 border-[#E2725B] text-[#E2725B] shadow-sm font-extrabold"
+                              : "bg-black/20 border-white/10 text-stone-400 hover:bg-white/5 hover:text-white"
+                          }`}
+                        >
+                          {m}m
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Recharts chart */}
+                  {downpaymentPercentage < 100 && (
+                    <div className="h-28 mt-2 cursor-crosshair">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData} margin={{ top: 0, right: 0, left: -25, bottom: 5 }}>
+                          <defs>
+                            <linearGradient id="barBase" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#E2725B" stopOpacity={0.9} />
+                              <stop offset="100%" stopColor="#E2725B" stopOpacity={0.3} />
+                            </linearGradient>
+                            <linearGradient id="barFee" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#E1D9C1" stopOpacity={0.5} />
+                              <stop offset="100%" stopColor="#E1D9C1" stopOpacity={0.1} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(225,217,193,0.06)" />
+                          <XAxis 
+                            dataKey="name" 
+                            axisLine={false} 
+                            tickLine={false} 
+                            tick={{ fontSize: 7, fill: 'rgba(225,217,193,0.5)' }} 
+                            height={15} 
+                          />
+                          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 8, fill: 'rgba(225,217,193,0.5)' }} tickFormatter={(value) => `S/ ${value.toLocaleString()}`} />
+                          <RechartsTooltip 
+                            cursor={{fill: 'rgba(255,255,255,0.03)'}}
+                            contentStyle={{ borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', backgroundColor: '#1A1412', color: '#FAF9F5', fontSize: '10px', fontFamily: 'sans-serif' }}
+                            formatter={(value: number) => [formatMoney(value), "Monto"]}
+                          />
+                          <Bar dataKey="base" stackId="a" fill="url(#barBase)" radius={[2, 2, 0, 0]} />
+                          <Bar dataKey="fee" stackId="a" fill="url(#barFee)" radius={[2, 2, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </div>
+
+                {/* Receipt Breakdown & CTA Button Column */}
+                <div className="flex flex-col justify-between gap-4">
+                  <div className="bg-black/35 rounded-xl p-4 border border-white/5 space-y-2.5 text-xs font-sans flex-1 flex flex-col justify-center">
+                    <div className="flex items-center justify-between text-stone-400">
+                      <span>Separación de Reserva:</span>
+                      <span className="font-semibold text-white font-mono">{formatMoney(separationFee)}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-stone-400 border-b border-white/5 pb-2.5">
+                      <span>Inicial Firma Contrato ({downpaymentPercentage}%):</span>
+                      <span className="font-semibold text-white font-mono">
+                        {formatMoney(downpaymentToPay)}
+                      </span>
+                    </div>
+
+                    {downpaymentPercentage < 100 ? (
+                      <div className="space-y-2 pt-1.5">
+                        <div className="flex items-center justify-between text-stone-400">
+                          <span>Saldo Financiado Directo:</span>
+                          <span className="text-white font-semibold font-mono">{formatMoney(remainingFinanced)}</span>
+                        </div>
+                        
+                        <div className="flex justify-between items-center text-stone-500 text-[11px]">
+                          <span className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#E2725B] inline-block" />
+                            Aporte Mensual Base:
+                          </span>
+                          <span className="text-stone-300 font-mono">{formatMoney(baseMonthly)}</span>
+                        </div>
+                        
+                        <div className="flex justify-between items-center text-stone-500 text-[11px]">
+                          <span className="flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#E1D9C1] inline-block" />
+                            Pasarela Digital (5%):
+                          </span>
+                          <span className="text-stone-300 font-mono">{formatMoney(adminFeeMonthly)}</span>
+                        </div>
+                        
+                        {/* Highlighted Monthly Installment box */}
+                        <div className="border border-[#E2725B]/20 bg-[#E2725B]/5 rounded-xl p-3.5 mt-2 flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-[#E2725B]">
+                            <Calendar className="h-4 w-4" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider font-mono">{financingMonths} Cuotas de:</span>
+                          </div>
+                          <span className="font-display text-xl font-bold text-[#E2725B]">
+                            {formatMoney(monthlyPayment)}
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="font-bold pt-3 text-[10px] text-[#E1D9C1] text-center uppercase tracking-wider">
+                        🎉 ¡Descuento por Pago al Contado (100%)!
+                      </div>
+                    )}
+                  </div>
+
+                  {/* CTA Reservation Button */}
+                  {lot.status === "available" || lot.status === "offer" ? (
+                    <button
+                      onClick={() => setShowReservationForm(true)}
+                      className="w-full bg-[#E2725B] text-white font-medium text-xs tracking-widest uppercase py-4 hover:bg-[#d85e45] hover:-translate-y-0.5 rounded-xl transition-all shadow-lg hover:shadow-xl active:scale-[0.99] flex items-center justify-center gap-2 cursor-pointer font-sans"
+                    >
+                      <Lock className="h-3.5 w-3.5" /> Separar Lote con S/ 1,000
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="w-full rounded-xl bg-stone-800 text-stone-500 py-4 text-xs font-bold cursor-not-allowed border border-white/5 uppercase tracking-widest"
+                    >
+                      No disponible
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+          </div>
         )}
 
         {/* Informative safety note */}
-        <div className="text-[11px] text-stone-600 font-medium text-center leading-relaxed mt-2 italic">
+        <div className="text-[10px] text-stone-500 font-light text-center leading-relaxed mt-4 italic">
           * Las áreas definitivas están sujetas a la aprobación municipal del plano. Las cuotas son referenciales.
+        </div>
+
+        {/* E2E Metadata verification fields */}
+        <div style={{ display: "none" }} data-testid="e2e-metadata">
+          <span data-testid="meta-frontage">{lot.frontage}</span>
+          <span data-testid="meta-depth">{lot.depth}</span>
+          <span data-testid="meta-price-soles">{lot.price_soles}</span>
+          <span data-testid="meta-parking-type">{lot.parking_type}</span>
+          <span data-testid="meta-walk-distance-parking">{lot.walk_distance_parking_meters}</span>
+          <span data-testid="meta-walk-distance-oasis">{lot.walk_distance_oasis_meters}</span>
         </div>
       </motion.div>
     </AnimatePresence>

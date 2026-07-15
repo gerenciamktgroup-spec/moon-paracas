@@ -3,17 +3,19 @@ import { getMeterToSvgScale } from "./terrainModel";
 
 export let globalOasisBoundary: XY[] = [];
 
-// Offsets in meters from the Northwest boundary of innerBuffer
+// Offsets in meters from the Northwest boundary of innerBuffer (widen Oasis, narrow Bands 2 and 9)
 export const BAND_OFFSETS = [
-  { low: 0, high: 20 },                  // Band 1: M1, M2, M3
-  { low: 26, high: 46 },                 // Band 2: M4, M5, M6
-  { low: 52, high: 72 },                 // Band 3: M7, M8, M9
-  { low: 78, high: 98 },                 // Band 4: M10, M11, M12
-  // Oasis: 98 to 133 (35m wide)
-  { low: 133, high: 153 },               // Band 5: M13, M14, M15
-  { low: 159, high: 179 },               // Band 6: M16, M17, M18
-  { low: 185, high: 205 },               // Band 7: M19, M20, M21
-  { low: 211, high: 231 }                // Band 8: M22, M23, M24
+  { low: 0.0, high: 17.4 },                  // Band 1: M1, M2, M3
+  { low: 24.9, high: 36.9 },                 // Band 2: M4, M5, M6 (reduced to 12.0m depth)
+  { low: 44.4, high: 61.8 },                 // Band 3: M7, M8, M9
+  { low: 69.3, high: 86.7 },                 // Band 4: M10, M11, M12
+  { low: 94.2, high: 111.6 },                // Band 5: M13, M14, M15
+  // Oasis: 111.6 to 142.4 (30.8m wide)
+  { low: 142.4, high: 159.8 },               // Band 6: M16, M17, M18
+  { low: 167.3, high: 184.7 },               // Band 7: M19, M20, M21
+  { low: 192.2, high: 209.6 },               // Band 8: M22, M23, M24
+  { low: 217.1, high: 229.1 },               // Band 9: M25, M26, M27 (reduced to 12.0m depth)
+  { low: 236.6, high: 254.0 }                // Band 10: M28, M29, M30
 ];
 
 export const BAND_BLOCKS = [
@@ -24,35 +26,41 @@ export const BAND_BLOCKS = [
   ["M13", "M14", "M15"],
   ["M16", "M17", "M18"],
   ["M19", "M20", "M21"],
-  ["M22", "M23", "M24"]
+  ["M22", "M23", "M24"],
+  ["M25", "M26", "M27"],
+  ["M28", "M29", "M30"]
 ];
 
+export let SCALLOP_AMPLITUDE = 2.5;
+export function setScallopAmplitude(val: number) {
+  SCALLOP_AMPLITUDE = val;
+}
 
-const BLOCK_LOT_COUNTS: Record<string, number> = {
-  M1: 10, M2: 10, M3: 10,
-  M4: 10, M5: 10, M6: 11,
-  M7: 10, M8: 11, M9: 10,
-  M10: 11, M11: 10, M12: 10,
-  M13: 10, M14: 10, M15: 11,
-  M16: 10, M17: 11, M18: 10,
-  M19: 11, M20: 10, M21: 10,
-  M22: 10, M23: 10, M24: 12
-};
+export function getCurvedD(t: number, d: number): number {
+  const scallop = SCALLOP_AMPLITUDE * Math.sin(3 * Math.PI * t);
+  const oasisStart = BAND_OFFSETS[3]?.high || 86.7;
+  if (d <= oasisStart) {
+    return d - Math.max(0, scallop) * (d / oasisStart);
+  } else {
+    const distFromOasis = 254 - d;
+    return d + Math.max(0, scallop) * (distFromOasis / (254 - oasisStart));
+  }
+}
 
 export function getMaxTForD(d: number): number {
   // Pure diagonal from edges to the center entry
-  // Center is at d = 115.5
+  // Center is at d = 121.0
   // Left side: d = 0 to 98
   if (d <= 98) {
-    return 0.145 - (0.145 - 0.035) * (d / 98);
+    return 0.08 - (0.08 - 0.035) * (d / 98);
   }
-  // Center access gap: d = 98 to 133
-  if (d > 98 && d < 133) {
+  // Center access gap: d = 98 to 136
+  if (d > 98 && d < 136) {
     return 0.035;
   }
-  // Right side: d = 133 to 231
-  if (d >= 133) {
-    return 0.035 + (0.145 - 0.035) * ((d - 133) / (231 - 133));
+  // Right side: d = 136 to 254
+  if (d >= 136) {
+    return 0.035 + (0.08 - 0.035) * ((d - 136) / (254 - 136));
   }
   
   return 0;
@@ -84,8 +92,8 @@ export function getBandPoint(innerBuffer: XY[], t: number, dMeters: number, scal
   const distPixels = Math.sqrt(dx * dx + dy * dy);
   const distMeters = distPixels / scale;
   
-  // Map dMeters (0..231) proportionally to the dynamic width distMeters
-  const f = Math.max(0, Math.min(1, dMeters / 231));
+  // Map dMeters (0..254) proportionally to the dynamic width distMeters
+  const f = Math.max(0, Math.min(1, dMeters / 254));
   const shiftMeters = f * distMeters;
   
   // Unit vector
@@ -96,6 +104,47 @@ export function getBandPoint(innerBuffer: XY[], t: number, dMeters: number, scal
     x: pNW.x + ux * shiftMeters * scale,
     y: pNW.y + uy * shiftMeters * scale
   };
+}
+export let BLOCK_0_START = 0.065;
+export let BLOCK_0_END = 0.297;
+export let BLOCK_1_START = 0.311;
+export let BLOCK_1_END = 0.639;
+export let BLOCK_2_START = 0.653;
+export let BLOCK_2_END = 0.960;
+
+export let BLOCK_0_START_CORNER = 0.065;
+export let BLOCK_0_END_CORNER = 0.297;
+export let BLOCK_1_START_CORNER = 0.311;
+export let BLOCK_1_END_CORNER = 0.639;
+export let BLOCK_2_START_CORNER = 0.653;
+export let BLOCK_2_END_CORNER = 0.960;
+
+export let BLOCK_0_START_CORNER_SE = 0.065;
+export let BLOCK_0_END_CORNER_SE = 0.297;
+export let BLOCK_1_START_CORNER_SE = 0.311;
+export let BLOCK_1_END_CORNER_SE = 0.639;
+export let BLOCK_2_START_CORNER_SE = 0.653;
+export let BLOCK_2_END_CORNER_SE = 0.960;
+
+export function setBlockParam(name: string, val: number) {
+  if (name === "BLOCK_0_START") BLOCK_0_START = val;
+  else if (name === "BLOCK_0_END") BLOCK_0_END = val;
+  else if (name === "BLOCK_1_START") BLOCK_1_START = val;
+  else if (name === "BLOCK_1_END") BLOCK_1_END = val;
+  else if (name === "BLOCK_2_START") BLOCK_2_START = val;
+  else if (name === "BLOCK_2_END") BLOCK_2_END = val;
+  else if (name === "BLOCK_0_START_CORNER") BLOCK_0_START_CORNER = val;
+  else if (name === "BLOCK_0_END_CORNER") BLOCK_0_END_CORNER = val;
+  else if (name === "BLOCK_1_START_CORNER") BLOCK_1_START_CORNER = val;
+  else if (name === "BLOCK_1_END_CORNER") BLOCK_1_END_CORNER = val;
+  else if (name === "BLOCK_2_START_CORNER") BLOCK_2_START_CORNER = val;
+  else if (name === "BLOCK_2_END_CORNER") BLOCK_2_END_CORNER = val;
+  else if (name === "BLOCK_0_START_CORNER_SE") BLOCK_0_START_CORNER_SE = val;
+  else if (name === "BLOCK_0_END_CORNER_SE") BLOCK_0_END_CORNER_SE = val;
+  else if (name === "BLOCK_1_START_CORNER_SE") BLOCK_1_START_CORNER_SE = val;
+  else if (name === "BLOCK_1_END_CORNER_SE") BLOCK_1_END_CORNER_SE = val;
+  else if (name === "BLOCK_2_START_CORNER_SE") BLOCK_2_START_CORNER_SE = val;
+  else if (name === "BLOCK_2_END_CORNER_SE") BLOCK_2_END_CORNER_SE = val;
 }
 
 export function buildBlocks(innerBuffer: XY[]): BlockPolygon[] {
@@ -109,74 +158,64 @@ export function buildBlocks(innerBuffer: XY[]): BlockPolygon[] {
   const steps = 60;
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
-    // 3 crater-like bulges
-    const scallop = 14 * Math.sin(3 * Math.PI * t); 
-    const d_low = 103 - Math.max(0, scallop);
+    const scallop = 4.5 * Math.sin(3 * Math.PI * t); 
+    const d_low = 110.1 - Math.max(0, scallop);
     oasisPoly.push(getBandPoint(innerBuffer, t, d_low, scale));
   }
   for (let i = steps; i >= 0; i--) {
     const t = i / steps;
-    const scallop = 14 * Math.sin(3 * Math.PI * t);
-    const d_high = 128 + Math.max(0, scallop);
+    const scallop = 4.5 * Math.sin(3 * Math.PI * t);
+    const d_high = 138.9 + Math.max(0, scallop);
     oasisPoly.push(getBandPoint(innerBuffer, t, d_high, scale));
   }
   globalOasisBoundary = oasisPoly;
   
-  // Optimized t intervals to maximize land use and eliminate dead space
-  const tRanges = [
-    { start: 0.02, end: 0.32 }, // Block 0 
-    { start: 0.34, end: 0.64 }, // Block 1 
-    { start: 0.66, end: 0.98 }  // Block 2 
-  ];
-
   // Now build the blocks for each band
-  for (let b = 0; b < 8; b++) {
+  for (let b = 0; b < 10; b++) {
     const blockIds = BAND_BLOCKS[b];
     const offsets = BAND_OFFSETS[b];
     
+    // Dynamic block ranges per band to avoid parking hubs on corners
+    let bandTRanges = [
+      { start: BLOCK_0_START, end: BLOCK_0_END }, // Block 0 
+      { start: BLOCK_1_START, end: BLOCK_1_END }, // Block 1 
+      { start: BLOCK_2_START, end: BLOCK_2_END }  // Block 2 
+    ];
+
+    if (b === 0 || b === 1) {
+      // Band 1 (M1-M3) and Band 2 (M4-M6): avoid SW (0.00-0.05) and NW (0.87-0.92) hubs
+      bandTRanges = [
+        { start: BLOCK_0_START_CORNER, end: BLOCK_0_END_CORNER },
+        { start: BLOCK_1_START_CORNER, end: BLOCK_1_END_CORNER },
+        { start: BLOCK_2_START_CORNER, end: BLOCK_2_END_CORNER }
+      ];
+    } else if (b === 8 || b === 9) {
+      // Band 9 (M25-M27) and Band 10 (M28-M30): avoid SE (0.00-0.06) and NE (0.86-0.915) hubs
+      bandTRanges = [
+        { start: BLOCK_0_START_CORNER_SE, end: BLOCK_0_END_CORNER_SE },
+        { start: BLOCK_1_START_CORNER_SE, end: BLOCK_1_END_CORNER_SE },
+        { start: BLOCK_2_START_CORNER_SE, end: BLOCK_2_END_CORNER_SE }
+      ];
+    }
+    
     for (let i = 0; i < blockIds.length; i++) {
       const id = blockIds[i];
-      let { start: tStart, end: tEnd } = tRanges[i];
+      let { start: tStart, end: tEnd } = bandTRanges[i];
       
-      let d_low_start = offsets.low;
-      let d_low_end = offsets.low;
-      let d_high_start = offsets.high;
-      let d_high_end = offsets.high;
-      
-      let t1 = tStart;
-      let t2 = tStart;
-      
-      // Implement Red Line (Mega Parking) cut on the first row of blocks
-      if (i === 0) {
-        // Continuous diagonal curve matching the parking boundary + 6m gap (0.015)
-        t1 = Math.max(tStart, getMaxTForD(d_low_start) + 0.015);
-        t2 = Math.max(tStart, getMaxTForD(offsets.high) + 0.015);
-        tStart = Math.max(t1, t2);
+      const blockPoly: XY[] = [];
+      const steps = 12;
+      for (let s = 0; s <= steps; s++) {
+        const curr_t = tStart + (tEnd - tStart) * (s / steps);
+        const curr_d_low = getCurvedD(curr_t, offsets.low);
+        blockPoly.push(getBandPoint(innerBuffer, curr_t, curr_d_low, scale));
+      }
+      for (let s = steps; s >= 0; s--) {
+        const curr_t = tStart + (tEnd - tStart) * (s / steps);
+        const curr_d_high = getCurvedD(curr_t, offsets.high);
+        blockPoly.push(getBandPoint(innerBuffer, curr_t, curr_d_high, scale));
       }
       
-      // Band 4 (M10-M12) borders the NW side of the Oasis
-      if (b === 3) {
-        const scallopStart = 14 * Math.sin(3 * Math.PI * tStart);
-        const scallopEnd = 14 * Math.sin(3 * Math.PI * tEnd);
-        d_high_start = 103 - Math.max(0, scallopStart);
-        d_high_end = 103 - Math.max(0, scallopEnd);
-      }
-      // Band 5 (M13-M15) borders the SE side of the Oasis
-      if (b === 4) {
-        const scallopStart = 14 * Math.sin(3 * Math.PI * tStart);
-        const scallopEnd = 14 * Math.sin(3 * Math.PI * tEnd);
-        d_low_start = 128 + Math.max(0, scallopStart);
-        d_low_end = 128 + Math.max(0, scallopEnd);
-      }
-      
-      const c1 = getBandPoint(innerBuffer, t1, d_low_start, scale);
-      const c2 = getBandPoint(innerBuffer, tEnd, d_low_end, scale);
-      const c3 = getBandPoint(innerBuffer, tEnd, d_high_end, scale);
-      const c4 = getBandPoint(innerBuffer, t2, d_high_start, scale);
-      
-      const blockPoly = [c1, c2, c3, c4];
-      
-      const blockCenterD = [10, 36, 62, 88, 143, 169, 195, 221][b];
+      const blockCenterD = [8.7, 30.9, 53.1, 78.0, 102.9, 151.1, 176.0, 200.9, 223.1, 245.3][b];
       let tCenter = (tStart + tEnd) / 2;
       
       // Shift block labels slightly along the shared roads to prevent 100% overlap
@@ -184,21 +223,21 @@ export function buildBlocks(innerBuffer: XY[]): BlockPolygon[] {
         tCenter -= 0.05;
       } else if (b === 1) {
         tCenter += 0.05;
-      } else if (b === 6) {
+      } else if (b === 8) {
         tCenter -= 0.05;
-      } else if (b === 7) {
+      } else if (b === 9) {
         tCenter += 0.05;
       }
       
-      const labelD = b < 4 ? blockCenterD - 6.5 : blockCenterD + 6.5;
+      const labelD = blockCenterD;
       const labelPoint = getBandPoint(innerBuffer, tCenter, labelD, scale);
       
       let role = "outer-ring";
-      if (["M1", "M2", "M3", "M4"].includes(id)) {
+      if (["M10", "M11", "M12", "M13", "M14", "M15"].includes(id)) {
         role = "inner-oasis";
-      } else if (["M5", "M6", "M7", "M8", "M9", "M10", "M11", "M12"].includes(id)) {
+      } else if (["M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M16", "M17", "M18", "M19", "M20", "M21", "M22", "M23", "M24", "M25", "M26", "M27"].includes(id)) {
         role = "middle-ring";
-      } else if (["M20", "M21"].includes(id)) {
+      } else if (["M28", "M29", "M30"].includes(id)) {
         role = "north-reserve";
       }
       
@@ -207,13 +246,14 @@ export function buildBlocks(innerBuffer: XY[]): BlockPolygon[] {
         role,
         polygon: blockPoly,
         labelPoint,
+        vehiclesAllowed: false,
         ringData: {
           innerPoly: [],
           outerPoly: [],
           t_start: tStart, // logical start for calculating dt
           t_end: tEnd,
-          t_start_low: t1,
-          t_start_high: t2,
+          t_start_low: tStart,
+          t_start_high: tStart,
           isFirstRow: i === 0
         }
       });

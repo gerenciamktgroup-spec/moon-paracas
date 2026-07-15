@@ -51,16 +51,16 @@ export const ParacasHistory = () => {
         </motion.div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-20">
-          {[1, 6, 8, 9].map((imgNum, idx) => (
+          {[1, 2, 3, 4].map((imgNum, idx) => (
              <motion.div 
                 key={idx}
                 initial={{ opacity: 0, scale: 0.9 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.1 }}
-                className="rounded-2xl overflow-hidden aspect-[4/3] shadow-lg"
+                className="rounded-none overflow-hidden aspect-[4/3] shadow-[3px_3px_0px_#2D3339] border-2 border-[#2D3339]"
               >
-                <img src={`/images/history/history-${imgNum}.png`} alt="Concepto Paracas" className="w-full h-full object-cover hover:scale-105 transition-transform duration-700" />
+                <img src={`/media/history_${imgNum}.jpeg`} alt={`Concepto Desierto ${imgNum}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-700" />
              </motion.div>
           ))}
         </div>

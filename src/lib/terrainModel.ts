@@ -27,7 +27,10 @@ export function buildTerrainScene(viewportW = 730, viewportH = 820) {
 
   // 4. Transform to SVG space for rendering
   const fitted = fitToViewport(local, viewportW, viewportH, 70);
-  const innerBuffer = fitToViewport(localInnerBuffer, viewportW, viewportH, 70);
+  const innerBuffer = localInnerBuffer.map(p => ({
+    x: (p.x - b.minX) * _scale + 70,
+    y: (p.y - b.minY) * _scale + 70
+  }));
 
   return { terrain: fitted, innerBuffer };
 }

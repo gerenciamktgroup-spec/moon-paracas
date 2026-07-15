@@ -40,9 +40,9 @@ export function createInnerBuffer(polygon: XY[], meters: number): XY[] {
     dy /= len;
     
     // Normal vector pointing "inward"
-    // If CW, inward is (-dy, dx). If CCW, inward is (dy, -dx).
-    const nx = isClockwise ? -dy : dy;
-    const ny = isClockwise ? dx : -dx;
+    // If CW, inward is (dy, -dx). If CCW, inward is (-dy, dx).
+    const nx = isClockwise ? dy : -dy;
+    const ny = isClockwise ? -dx : dx;
     
     // Shift points
     shiftedLines.push({

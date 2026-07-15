@@ -1,5 +1,5 @@
 import { Amenity, XY } from "../types/map";
-import { getBandPoint, globalOasisBoundary, getMaxTForD } from "./blockModel";
+import { getBandPoint, globalOasisBoundary, getMaxTForD, getCurvedD as getCurvedDBlock } from "./blockModel";
 import { centroid, shoelaceArea } from "./geometry";
 import { getMeterToSvgScale } from "./terrainModel";
 
@@ -79,10 +79,9 @@ function createAmenityPoly(
   scale: number
 ): XY[] {
   const getCurvedD = (t: number, dStatic: number) => {
-    const f = (dStatic - 98) / 35; // Relative position factor (0 = NW edge, 1 = SE edge)
-    const scallop = 14 * Math.sin(3 * Math.PI * t);
-    const d_low = 103 - Math.max(0, scallop);
-    const d_high = 128 + Math.max(0, scallop);
+    const f = (dStatic - 111.6) / 30.8;
+    const d_low = getCurvedDBlock(t, 111.6) + 1.0;
+    const d_high = getCurvedDBlock(t, 142.4) - 1.0;
     return d_low + f * (d_high - d_low);
   };
 
@@ -289,57 +288,58 @@ export function buildAmenities(innerBuffer: XY[]): Amenity[] {
   const oasisPoly =
     globalOasisBoundary && globalOasisBoundary.length > 0 ? globalOasisBoundary : [];
 
-  // ─── OASIS amenities (all confined to d = 103..128 to avoid touching lots) ───
+  // ─── OASIS amenities (all confined to d = 110..138 to avoid touching lots) ───
   const amenitiesList: Amenity[] = [
     // ── ZONA 1: Hub Social y Acuático (Centro-Sur, Bulge 1 around t=0.20-0.27) ──
     {
       id: "A_CLUB", kind: "clubhouse",
-      // L-shape scaled down to max 20x20m to fit perfectly at t=0.20
-      polygon: createTrueLShapedPoly(innerBuffer, 0.20, 116, scale, Math.PI / 2)
+      // L-shape scaled down to max 20x20m to fit perfectly at t=0.185
+      polygon: createTrueLShapedPoly(innerBuffer, 0.185, 127.0, scale, Math.PI / 2)
     },
     {
       id: "A_WATER1", kind: "pool",
-      // Centered at t=0.27, expanded to luxury scale
-      polygon: createOrganicPoly(innerBuffer, 0.27, 115.5, 0.035, 8.5, scale)
+      // Enlarge pool radiusD to 11.0m to fit the widened Oasis beautifully at t=0.240
+      polygon: createOrganicPoly(innerBuffer, 0.240, 127.0, 0.028, 11.0, scale)
     },
     {
       id: "A_DECK", kind: "deck",
-      polygon: createTrueArchitecturalPoly(innerBuffer, 0.36, 120, 15, 12, scale) 
+      polygon: createTrueArchitecturalPoly(innerBuffer, 0.36, 127.0, 15, 12, scale) 
     },
     {
       id: "A_YOGA", kind: "yoga-plaza",
-      polygon: createTrueArchitecturalPoly(innerBuffer, 0.42, 112, 12, 12, scale) 
+      polygon: createTrueArchitecturalPoly(innerBuffer, 0.42, 127.0, 12, 12, scale) 
     },
 
     // ── ZONA 2: Hub Botánico y Recreativo (Centro, t=0.45-0.75) ──
     {
       id: "A_MIRROR", kind: "water-mirror", // Espejo de Agua central
-      polygon: createTrueArchitecturalPoly(innerBuffer, 0.53, 115.5, 14, 18, scale)
+      polygon: createTrueArchitecturalPoly(innerBuffer, 0.53, 127.0, 18, 22, scale)
     },
     {
       id: "A_PALM", kind: "palm-forest",
-      // Centered at t=0.70, radiusT=0.03 to avoid CROSS_ROAD_1 at t=0.65
-      polygon: createOrganicPoly(innerBuffer, 0.70, 115.5, 0.03, 8, scale)
+      // Enlarged to radiusD=10
+      polygon: createOrganicPoly(innerBuffer, 0.70, 127.0, 0.03, 10, scale)
     },
     {
       id: "A_XERO", kind: "xerophytic-garden",
-      polygon: createOrganicPoly(innerBuffer, 0.78, 115.5, 0.03, 8, scale)
+      // Enlarged to radiusD=10
+      polygon: createOrganicPoly(innerBuffer, 0.78, 127.0, 0.03, 10, scale)
     },
 
     // ── ZONA 3: Remate y Utilities (Norte, Bulge 2 around t=0.85) ──
     {
       id: "A_MOON", kind: "moon-deck",
-      polygon: createRectPoly(innerBuffer, 0.85, 115.5, 0.02, 8, scale)
+      polygon: createRectPoly(innerBuffer, 0.85, 127.0, 0.02, 12, scale)
     },
     // Cisterna y Bombas (Utility 1)
     {
       id: "A_UTIL1", kind: "deck", 
-      polygon: createTrueArchitecturalPoly(innerBuffer, 0.91, 110, 8, 12, scale)
+      polygon: createTrueArchitecturalPoly(innerBuffer, 0.885, 121.0, 8, 12, scale)
     },
     // PTAR (Utility 2)
     {
       id: "A_UTIL2", kind: "deck", 
-      polygon: createTrueArchitecturalPoly(innerBuffer, 0.91, 120, 10, 15, scale)
+      polygon: createTrueArchitecturalPoly(innerBuffer, 0.885, 133.0, 10, 15, scale)
     },
 
     // ── EXTERNAL AMENITIES ──
@@ -348,51 +348,67 @@ export function buildAmenities(innerBuffer: XY[]): Amenity[] {
       id: "A_BUS_STOP", kind: "bus-bay",
       polygon: createTrueArchitecturalPoly(innerBuffer, -0.005, 115.5, 20, 4, scale)
     },
-    // ── Welcome Center (Oficina Ventas - Left Side) ───────────────────────
+    // ── Welcome Center (Oficina Ventas - Left Side) — Shifted t to 0.008 to be outside block
     {
       id: "A_WELCOME", kind: "welcome-center",
-      polygon: createTrueArchitecturalPoly(innerBuffer, 0.016, 70, 18, 10, scale)
+      polygon: createTrueArchitecturalPoly(innerBuffer, 0.008, 70, 18, 10, scale)
     },
-    // ── Helipad (Moved to a safe, designated parking/utility zone at the east tip) ──
+    // ── Helipad (Moved to a safe, designated parking/utility zone at the east tip) — Shifted d to 239 and size to 12x12
     {
       id: "A_HELI", kind: "helipad",
-      polygon: createTrueArchitecturalPoly(innerBuffer, 0.08, 218, 14, 14, scale) 
+      polygon: createTrueArchitecturalPoly(innerBuffer, 0.022, 239, 12, 12, scale) 
     },
     // ── Gatehouse & Security (Ingreso/Salida) ─────────────────────────────
     // Left Cabin (Ingreso)
     {
       id: "A_GATE_L", kind: "gatehouse",
-      polygon: createTrueArchitecturalPoly(innerBuffer, 0.022, 110, 4, 4, scale)
+      polygon: createTrueArchitecturalPoly(innerBuffer, 0.015, 110, 4, 4, scale)
     },
     // Right Cabin (Salida)
     {
       id: "A_GATE_R", kind: "gatehouse",
-      polygon: createTrueArchitecturalPoly(innerBuffer, 0.022, 121, 4, 4, scale)
+      polygon: createTrueArchitecturalPoly(innerBuffer, 0.015, 121, 4, 4, scale)
     },
     // Central Median Island (Xerophytic garden separator)
     {
       id: "A_GATE_MEDIAN", kind: "xerophytic-garden",
-      polygon: createTrueArchitecturalPoly(innerBuffer, 0.022, 115.5, 8, 2, scale)
+      polygon: createTrueArchitecturalPoly(innerBuffer, 0.015, 115.5, 2, 8, scale)
     },
     // Modern Architectural Roof covering both cabins and lanes
     {
       id: "A_GATE_ROOF", kind: "gatehouse-roof",
-      polygon: createTrueArchitecturalPoly(innerBuffer, 0.022, 115.5, 4, 16, scale)
+      polygon: createTrueArchitecturalPoly(innerBuffer, 0.015, 115.5, 16, 4, scale)
     },
     // Control Bar
     {
       id: "A_GATE_BAR", kind: "parking-driveway", // Thin line styling
-      polygon: createTrueArchitecturalPoly(innerBuffer, 0.022, 115.5, 7, 0.5, scale)
+      polygon: createTrueArchitecturalPoly(innerBuffer, 0.015, 115.5, 7, 0.5, scale)
     },
     // ── Visitor Lobby (Right Side) ────────────────────────────────────────
     {
       id: "A_LOBBY", kind: "visitor-lobby",
       polygon: createTrueArchitecturalPoly(innerBuffer, 0.015, 148, 12, 8, scale)
     },
-    // ── Loading & Service Bay (Right Side) ─────────────────────────────────
+    // ── Loading & Service Bay (Right Side) — Shifted t to 0.008 to be outside block
     {
       id: "A_BAY", kind: "bus-bay",
-      polygon: createTrueArchitecturalPoly(innerBuffer, 0.015, 165, 30, 6, scale)
+      polygon: createTrueArchitecturalPoly(innerBuffer, 0.008, 165, 20, 6, scale)
+    },
+    // ── Arrival Rotonda — organic circle at the entry plaza ─────────────────
+    // Placed at t=0.038, d=115.5. Redesigned to a premium 22x14m rectangular plaza.
+    {
+      id: "A_ROTONDA", kind: "entry-plaza",
+      polygon: createTrueArchitecturalPoly(innerBuffer, 0.038, 115.5, 22, 14, scale)
+    },
+    // ── Entry Promenade — palm-lined spine from rotonda to oasis ────────────
+    // Shifted left promenade to d=113.5 and right to d=126.5 to prevent curve overlaps
+    {
+      id: "A_PROMENADE_L", kind: "xerophytic-garden",
+      polygon: createAmenityPoly(innerBuffer, 0.080, 0.140, 119.5, 122.5, scale)
+    },
+    {
+      id: "A_PROMENADE_R", kind: "xerophytic-garden",
+      polygon: createAmenityPoly(innerBuffer, 0.080, 0.140, 131.5, 134.5, scale)
     }
   ];
 
