@@ -345,8 +345,8 @@ export const DomeDetails: React.FC<DomeDetailsProps> = ({ lot, onReserve }) => {
                     <span>{formatPen(simulation.financedAmount)}</span>
                   </div>
                   <div className="flex justify-between items-center text-[#A2A9A2]">
-                    <span>Interes flat 5%:</span>
-                    <span className="text-[#E0A96D] font-medium">+{formatPen(simulation.flatInterest)}</span>
+                    <span>Escenario de interés:</span>
+                    <span className="text-[#88AA77] font-medium">Declarado 0%* · {formatPen(simulation.flatInterest)}</span>
                   </div>
                   <div className="flex justify-between items-center pt-2 border-t border-[#C5A059]/10 text-[#C5A059] font-bold">
                     <span>{installments} cuotas mensuales:</span>
@@ -357,7 +357,7 @@ export const DomeDetails: React.FC<DomeDetailsProps> = ({ lot, onReserve }) => {
               {isCash && (
                 <div className="flex justify-between items-center pt-2 border-t border-[#C5A059]/10 text-[#88AA77] font-bold">
                   <span>Pago de contado</span>
-                  <span>Sin interes</span>
+                  <span>Sujeto a lista vigente</span>
                 </div>
               )}
             </div>

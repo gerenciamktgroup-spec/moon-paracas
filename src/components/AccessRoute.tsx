@@ -204,7 +204,7 @@ export const AccessRoute: React.FC = () => {
             Conectividad Inmediata
           </h4>
           <p className="text-xs text-stone-300 leading-relaxed font-light">
-            El acceso a <strong>Moon Paracas</strong> está diseñado para garantizar la transitabilidad y la seguridad física del terreno en cualquier época del año. 
+            El acceso propuesto a <strong>Moon Paracas</strong> debe validarse mediante visita, levantamiento de ruta, derecho de paso y plan de mantenimiento estacional.
           </p>
 
           <div className="space-y-3.5 pt-2">
@@ -213,7 +213,7 @@ export const AccessRoute: React.FC = () => {
               <div>
                 <h5 className="text-[11px] font-bold text-white uppercase tracking-wider">Km 254 Panamericana Sur</h5>
                 <p className="text-[10px] text-stone-400 mt-0.5 leading-relaxed">
-                  Punto de partida oficial. Conexión rápida a la autopista y retorno fluido hacia Lima (Norte) o Ica/Nazca (Sur).
+                  Punto de partida referencial. El acceso, derecho de paso, tiempos y conexión vial deben validarse mediante visita y documentación vigente.
                 </p>
               </div>
             </div>

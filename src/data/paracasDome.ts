@@ -70,8 +70,8 @@ export const PARACAS_DOME_PROJECT = {
 export const PARACAS_DOME_FINANCING_RULES = {
   reservation: 1000,
   minDownPaymentPercent: 50,
-  maxInstallments: 24,
-  flatInterestPercent: 5
+  maxInstallments: 18,
+  flatInterestPercent: 0
 };
 
 export const PARACAS_DOME_OFFERS: CommercialOffer[] = [

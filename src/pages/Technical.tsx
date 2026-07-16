@@ -1,79 +1,56 @@
 import React from "react";
-import { Lot } from "../types/map";
 import { EngineeringSpecs } from "../components/EngineeringSpecs";
 import { ContractsAndRules } from "../components/ContractsAndRules";
-import { ContractsSignature } from "../components/ContractsSignature";
+import { DueDiligenceChecklist } from "../components/DueDiligenceChecklist";
 import { AccessRoute } from "../components/AccessRoute";
-import { Scale, ShieldAlert, Award, Compass } from "lucide-react";
+import { Scale, ShieldAlert, ClipboardCheck, Compass } from "lucide-react";
+import { InteriorHero } from "../components/InteriorHero";
 
-interface TechnicalProps {
-  selectedLot: Lot | null;
-  onSignatureSuccess: (message: string) => void;
-}
-
-export const Technical: React.FC<TechnicalProps> = ({ selectedLot, onSignatureSuccess }) => {
+export const Technical: React.FC = () => {
   return (
-    <div className="relative min-h-[90vh] text-[#E1D9C1] py-12 px-4 sm:px-6 md:px-8 space-y-16 overflow-hidden">
+    <div className="relative min-h-[90vh] overflow-hidden bg-[#111715] text-[#E1D9C1]">
+      <InteriorHero
+        eyebrow="Transparencia del proyecto"
+        title={<>La información también<br /><em className="font-normal text-[#d5aa83]">es parte del diseño.</em></>}
+        description="Una decisión inmobiliaria requiere evidencia física, económica y jurídica. Aquí organizamos los criterios que debes contrastar con estudios, partidas y contratos vigentes antes de separar."
+        index="Memoria técnica"
+        aside={<p className="mt-4 font-display text-2xl leading-tight text-white/78">Cuatro capas para revisar el proyecto con método.</p>}
+      />
 
-      {/* Header section with neuromarketing storytelling copy */}
-      <div className="text-center space-y-4 max-w-4xl mx-auto pt-6">
-        <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#E2725B] px-3 py-1 bg-[#E2725B]/10 rounded-full border border-[#E2725B]/20">
-          Transparencia y Legalidad
-        </span>
-        <h2 className="font-display text-4xl sm:text-5xl font-bold uppercase text-white tracking-wide leading-tight">
-          Memoria Técnica y Visor Contractual
-        </h2>
-        <p className="text-stone-300 font-sans text-xs sm:text-sm font-light leading-relaxed max-w-3xl mx-auto">
-          La compra de un lote en el desierto requiere certeza física y jurídica absoluta. Ponemos a tu disposición los parámetros estrictos de cimentación, revestimientos bioclimáticos y los contratos de incorporación y reglamentos oficiales de <strong>Moon Paracas</strong>.
-        </p>
-      </div>
-
-      {/* Layout components column */}
-      <div className="max-w-[1200px] mx-auto space-y-16">
+      <div className="mx-auto max-w-[1200px] space-y-24 px-5 py-16 sm:px-8 sm:py-20 lg:px-12 lg:py-24">
         
         {/* Section 1: Engineering & Specs */}
         <section className="space-y-6">
-          <div className="flex items-center gap-3 border-b border-white/10 pb-4 max-w-4xl mx-auto">
-            <ShieldAlert className="w-6 h-6 text-[#E2725B]" />
-            <h3 className="font-display text-2xl font-bold uppercase text-white tracking-wider">
-              1. Parámetros de Ingeniería y Coexistencia
-            </h3>
+          <div className="mx-auto flex max-w-4xl items-end gap-4 border-b border-white/10 pb-5">
+            <span className="font-display text-5xl font-medium text-[#bb5638]">01</span>
+            <div><p className="mb-1 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[#d5aa83]"><ShieldAlert className="h-4 w-4" /> Evidencia física</p><h2 className="font-display text-2xl font-medium text-white sm:text-3xl">Parámetros de ingeniería y coexistencia</h2></div>
           </div>
           <EngineeringSpecs />
         </section>
 
         {/* Section 2: Contracts and bylaws */}
         <section className="space-y-6">
-          <div className="flex items-center gap-3 border-b border-white/10 pb-4 max-w-5xl mx-auto">
-            <Scale className="w-6 h-6 text-[#E2725B]" />
-            <h3 className="font-display text-2xl font-bold uppercase text-white tracking-wider">
-              2. Documentos y Contratos del Eco-Condominio
-            </h3>
+          <div className="mx-auto flex max-w-5xl items-end gap-4 border-b border-white/10 pb-5">
+            <span className="font-display text-5xl font-medium text-[#bb5638]">02</span>
+            <div><p className="mb-1 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[#d5aa83]"><Scale className="h-4 w-4" /> Evidencia jurídica</p><h2 className="font-display text-2xl font-medium text-white sm:text-3xl">Documentos y contratos del condominio</h2></div>
           </div>
           <ContractsAndRules />
         </section>
 
-        {/* Section 3: Safe Digital Signature */}
+        {/* Section 3: buyer due diligence */}
         <section className="space-y-6">
-          <div className="flex items-center gap-3 border-b border-white/10 pb-4 max-w-5xl mx-auto">
-            <Award className="w-6 h-6 text-[#E2725B]" />
-            <h3 className="font-display text-2xl font-bold uppercase text-white tracking-wider">
-              3. Simulador de Firma Digital de Contratos
-            </h3>
+          <div className="mx-auto flex max-w-5xl items-end gap-4 border-b border-white/10 pb-5">
+            <span className="font-display text-5xl font-medium text-[#bb5638]">03</span>
+            <div><p className="mb-1 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[#d5aa83]"><ClipboardCheck className="h-4 w-4" /> Proceso de compra</p><h2 className="font-display text-2xl font-medium text-white sm:text-3xl">Lista de verificación del comprador</h2></div>
           </div>
-          <ContractsSignature 
-            selectedLot={selectedLot} 
-            onSignatureSuccess={onSignatureSuccess} 
-          />
+          <DueDiligenceChecklist />
         </section>
 
         {/* Section 4: Access Route from Panamericana Sur */}
         <section className="space-y-6">
-          <div className="flex items-center gap-3 border-b border-white/10 pb-4 max-w-5xl mx-auto">
-            <Compass className="w-6 h-6 text-[#E2725B]" />
-            <h3 className="font-display text-2xl font-bold uppercase text-white tracking-wider">
-              4. Ruta de Acceso desde la Panamericana Sur
-            </h3>
+          <div className="mx-auto flex max-w-5xl items-end gap-4 border-b border-white/10 pb-5">
+            <span className="font-display text-5xl font-medium text-[#bb5638]">04</span>
+            <div><p className="mb-1 flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[#d5aa83]"><Compass className="h-4 w-4" /> Llegada al proyecto</p><h2 className="font-display text-2xl font-medium text-white sm:text-3xl">Ruta de acceso desde la Panamericana Sur</h2></div>
           </div>
           <AccessRoute />
         </section>

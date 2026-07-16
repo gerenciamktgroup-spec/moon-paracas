@@ -67,6 +67,7 @@ export type Amenity = {
     | "xerophytic-garden"
     | "yoga-plaza"
     | "water-mirror"
+    | "pocket-garden"
     | "palm-forest"
     | "bus-bay"
     | "welcome-center"
@@ -99,6 +100,8 @@ export type BlockPolygon = {
 
 export type Lot = {
   id: string;
+  /** Previous procedural identifier, used only to preserve remote inventory state during migration. */
+  legacyId?: string;
   blockId: string;
   projectId?: "moon-paracas" | "paracas-dome";
   typology: LotTypology;
@@ -126,6 +129,16 @@ export type Lot = {
   parking_type?: string;
   walk_distance_parking_meters?: number;
   walk_distance_oasis_meters?: number;
+  placementSource?: "technical-inventory" | "procedural" | "masterplan-v2";
+  masterplanVersion?: string;
+  commercialPriceVersion?: string;
+  assignedParkingId?: string;
+  /** Largest circular footprint geometrically contained by the parcel polygon. */
+  buildableCircleCenter?: XY;
+  buildableCircleDiameterM?: number;
+  fitsDome4m?: boolean;
+  fitsDome8m?: boolean;
+  recommendedDomeDiameterM?: 4 | 8;
 };
 
 export type SalesFilters = {

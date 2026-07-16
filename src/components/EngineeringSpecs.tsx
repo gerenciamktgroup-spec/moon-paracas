@@ -4,40 +4,40 @@ import { ShieldAlert, Wind, Mountain, CheckCircle, Droplet, CarFront } from "luc
 export const EngineeringSpecs: React.FC = () => {
   const specs = [
     {
-      title: "Cimentación Antisísmica Monolítica sobre Roca Sólida",
+      title: "Cimentación sujeta a estudio de suelos y cálculo estructural",
       icon: <Mountain className="h-6 w-6 text-[#E2725B]" />,
       num: "01",
-      content: "Construir sobre la meseta geológica del Tablazo de Paracas es tu mayor garantía de seguridad. Al ser roca sedimentaria consolidada, se elimina totalmente el riesgo de licuación de suelo (común en zonas arenosas). El Masterplan exige plateas de cimentación rígidas y continuas que anclan de forma indestructible cada villa a la roca madre, garantizando un patrimonio eterno e imperturbable ante sismos."
+      content: "La condición aparente del tablazo debe confirmarse con investigación geotécnica específica. El sistema de cimentación de cada vivienda será definido y firmado por un ingeniero estructural según suelo, cargas, norma sismorresistente y expediente aprobado."
     },
     {
       title: "Cemento Tipo V contra la Erosión y Salitre",
       icon: <ShieldAlert className="h-6 w-6 text-[#E2725B]" />,
       num: "02",
-      content: "El aire costero y la salinidad natural del desierto pueden degradar el concreto estándar en pocos años. Para garantizar que tu villa sea heredable por generaciones, Moon Paracas obliga al uso exclusivo de Cemento Tipo V (alta resistencia a sulfatos y cloruros) en todos los cimientos expuestos al terreno, bloqueando la corrosión y protegiendo el acero estructural."
+      content: "La exposición costera exige especificar durabilidad, recubrimiento del acero y resistencia a sulfatos a partir del estudio del terreno y del diseño estructural. El tipo de cemento y la dosificación final deben constar en la memoria técnica de cada obra."
     },
     {
       title: "Urbanismo Sinuoso: Mitigación del Viento Alisio",
       icon: <Wind className="h-6 w-6 text-[#E2725B]" />,
       num: "03",
-      content: "Nuestras calles no siguen líneas rectas rígidas, sino un trazado curvo y orgánico diseñado para quebrar la aceleración de los vientos alisios que soplan del sur. Las vías secundarias cuentan con una sección total de 10 metros: 6m de calzada tratada con salmuera (cero polvo) y 4m de bermas con xeropaisajismo nativo (agaves y cactus autóctonos) que frena las corrientes."
+      content: "El trazado curvo busca reducir recorridos visuales y crear transiciones de paisaje. Su desempeño frente al viento, el control de polvo y la solución de calzada requieren validación ambiental, de drenaje, tránsito y mantenimiento antes de su ejecución definitiva."
     },
     {
-      title: "Cota 108m: Inmunidad contra Maremotos e Inundaciones",
+      title: "Cota referencial y gestión de riesgos naturales",
       icon: <CheckCircle className="h-6 w-6 text-[#E2725B]" />,
       num: "04",
-      content: "Ubicado en la cúspide de una meseta de roca natural a más de 108 metros sobre el nivel del mar, Moon Paracas ofrece una seguridad geográfica insuperable. Esta altitud colosal elimina al 100% cualquier riesgo de tsunamis, desbordes fluviales o aumento del nivel marino. Una fortaleza natural elevada que resguarda tu vida y tu inversión."
+      content: "La elevación referencial del predio es una variable favorable que debe contrastarse con levantamiento topográfico, mapas oficiales de peligro, rutas de evacuación y estudios de drenaje. Ninguna ubicación permite afirmar riesgo cero ante eventos naturales."
     },
     {
-      title: "Eco-Autonomía Hídrica y Biodigestión de Impacto Cero",
+      title: "Saneamiento autónomo con operación verificable",
       icon: <Droplet className="h-6 w-6 text-[#E2725B]" />,
       num: "05",
-      content: "Preservamos la pureza ecológica de nuestro subsuelo rocoso mediante tecnología avanzada. Cada lote está obligado a contar con un sistema de biodigestión autolimpiable hermético homologado. Este procesa biológicamente las aguas residuales sin filtraciones nocivas al subsuelo, permitiendo recuperar el agua clarificada exclusivamente para el riego del xeropaisajismo privado."
+      content: "Las soluciones autónomas de tratamiento deben dimensionarse, autorizarse y mantenerse según ocupación y normativa aplicable. La ficha final debe indicar proveedor, capacidad, calidad del efluente, destino permitido, frecuencia de mantenimiento y responsable de operación."
     },
     {
-      title: "Santuario Peatonal: Silencio Absoluto y Aire Puro",
+      title: "Movilidad interior de baja velocidad",
       icon: <CarFront className="h-6 w-6 text-[#E2725B]" />,
       num: "06",
-      content: "El lujo del silencio es nuestro mayor privilegio. Hemos eliminado por completo el ruido, el smog y el peligro de los autos convencionales del interior del condominio. Los residentes estacionan en los 4 Hubs periféricos (con 438 cocheras y drop-offs de carga), abriendo paso a calles secundarias seguras e internas transitadas exclusivamente a pie, en bicicleta o buggies eléctricos."
+      content: "La propuesta prioriza recorridos peatonales, bicicletas y movilidad eléctrica desde hubs periféricos. El reglamento definitivo debe contemplar accesibilidad, emergencias, carga, visitas, límites de velocidad y capacidad real de estacionamiento."
     }
   ];
 
@@ -48,7 +48,7 @@ export const EngineeringSpecs: React.FC = () => {
           Seguridad, Paisajismo <span className="text-[#E2725B] font-light">e Ingeniería</span>
         </h3>
         <p className="text-stone-300 max-w-2xl mx-auto text-xs sm:text-sm font-light leading-relaxed">
-          Parámetros técnicos obligatorios de alta ingeniería y sostenibilidad, diseñados para blindar tu patrimonio y garantizar la plusvalía de Moon Paracas de forma permanente.
+          Criterios preliminares para revisar con ingeniería, permisos y especificaciones firmadas antes de construir.
         </p>
       </div>
 

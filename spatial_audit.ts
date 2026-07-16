@@ -1,12 +1,7 @@
-import { buildTerrainScene, getMeterToSvgScale } from "./src/lib/terrainModel";
-import { buildBlocks } from "./src/lib/blockModel";
-import { buildLots, buildParkingLots } from "./src/lib/lotModel";
-import { buildAmenities } from "./src/lib/amenityModel";
-import { buildRoads } from "./src/lib/roadModel";
 import { centroid } from "./src/lib/geometry";
 import { XY } from "./src/types/map";
 import * as turf from "@turf/turf";
-import { checkCollision } from "./src/lib/spatialAnalyzer";
+import { buildMoonParacasInventory } from "./src/lib/masterplanInventory";
 
 // Convert XY polygon to Turf polygon
 function toTurfPoly(poly: XY[]): any {
@@ -75,55 +70,16 @@ function roadToPolygon(path: XY[], widthM: number, scale: number): XY[] {
 // Main execution
 function runAudit() {
   console.log("=== STARTING SPATIAL COLLISION AUDIT ===");
-  const { innerBuffer } = buildTerrainScene();
-  const scale = getMeterToSvgScale();
-  
-  const blocks = buildBlocks(innerBuffer);
-  const roads = buildRoads(innerBuffer);
-  const amenities = buildAmenities(innerBuffer);
-  
-  const roadPolygons = roads.map(r => roadToPolygon(r.path, r.widthM, scale));
-
-  // Build obstacles for parking, including blocks, amenities, and roads
-  const obstacles = [
-    ...blocks.map(b => b.polygon),
-    ...amenities.map(a => a.polygon),
-    ...roadPolygons
-  ];
-  
-  const parkingLots = buildParkingLots(innerBuffer, obstacles, roadPolygons);
-
-  function circleToPolygon(center: any, radiusM: number, scale: number): any[] {
-    const poly: any[] = [];
-    const points = 12;
-    const r = radiusM * scale;
-    for (let i = 0; i < points; i++) {
-      const angle = (i * 2 * Math.PI) / points;
-      poly.push({
-        x: center.x + r * Math.cos(angle),
-        y: center.y + r * Math.sin(angle)
-      });
-    }
-    return poly;
-  }
-
-  const culDeSacs: any[][] = [];
-  roads.forEach(r => {
-    if (r.id.startsWith("LINEAR_ROAD")) {
-      culDeSacs.push(circleToPolygon(r.path[0], 6.0, scale));
-    }
-  });
-
-  const activeBuildings = [
-    ...amenities
-      .filter((a: any) => a.id !== "A_SAND" && a.kind !== "sand-plaza")
-      .map((a: any) => a.polygon),
-    ...culDeSacs,
-    ...parkingLots.map((p: any) => p.polygon),
-    ...roadPolygons
-  ];
-  
-  const cleanHouseLots = buildLots(blocks, parkingLots, roadPolygons, activeBuildings);
+  const {
+    terrainScene: { innerBuffer },
+    scale,
+    blocks,
+    roads,
+    amenities,
+    roadPolys: roadPolygons,
+    parkings: parkingLots,
+    residentialLots: cleanHouseLots,
+  } = buildMoonParacasInventory();
   
   const allLots = [...cleanHouseLots, ...parkingLots];
 

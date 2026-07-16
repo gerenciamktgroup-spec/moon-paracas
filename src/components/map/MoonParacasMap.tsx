@@ -1,13 +1,13 @@
 import React, { useMemo, useState } from "react";
 import { Lot, MasterplanScene, SalesFilters } from "../../types/map";
-import { buildTerrainScene } from "../../lib/terrainModel";
-import { buildRoads } from "../../lib/roadModel";
-import { buildAmenities } from "../../lib/amenityModel";
-import { buildBlocks } from "../../lib/blockModel";
-import { buildLots, buildParkingLots } from "../../lib/lotModel";
+import { buildConstellationMasterplan } from "../../lib/constellationModel";
 import { filterLots } from "../../lib/salesModel";
 import { FiltersBar } from "./FiltersBar";
 import { MapCanvas } from "./MapCanvas";
+import { BadgeCheck, CarFront, House, Map, Ruler } from "lucide-react";
+import { PROJECT } from "../../config/project";
+import { COMMERCIAL_PRICE_PERIOD_LABEL } from "../../config/pricing";
+import { DomeConceptPanel } from "./DomeConceptPanel";
 
 export default function MoonParacasMap({
   lots,
@@ -27,18 +27,14 @@ export default function MoonParacasMap({
   });
 
   const scene = useMemo<MasterplanScene>(() => {
-    const terrainScene = buildTerrainScene();
-    const roads = buildRoads(terrainScene.innerBuffer);
-    // buildBlocks MUST run first — it populates globalOasisBoundary for the sand-plaza
-    const blocks = buildBlocks(terrainScene.innerBuffer);
-    const amenities = buildAmenities(terrainScene.innerBuffer);
+    const layout = buildConstellationMasterplan();
 
     return {
-      terrain: terrainScene.terrain,
-      innerBuffer: terrainScene.innerBuffer,
-      roads,
-      amenities,
-      blocks,
+      terrain: layout.terrainScene.terrain,
+      innerBuffer: layout.terrainScene.innerBuffer,
+      roads: layout.roads,
+      amenities: layout.amenities,
+      blocks: layout.blocks,
       lots
     };
   }, [lots]);
@@ -47,40 +43,76 @@ export default function MoonParacasMap({
     () => filterLots(scene.lots, filters),
     [scene.lots, filters]
   );
+  const inventorySummary = useMemo(() => {
+    const parkingCount = scene.lots.filter((lot) => lot.typology === "parking").length;
+    const commonParkingCount = scene.lots.filter((lot) => lot.typology === "parking-external").length;
+    const residentialLots = scene.lots.filter((lot) => !lot.typology.startsWith("parking"));
+    const dome8Count = residentialLots.filter((lot) => lot.fitsDome8m).length;
+    return { parkingCount, commonParkingCount, residentialCount: residentialLots.length, dome8Count };
+  }, [scene.lots]);
 
   return (
-    <section className="moon-paracas-map flex flex-col h-auto md:h-[720px] w-full bg-[#1D1714]/60 backdrop-blur-xl overflow-hidden border border-[rgba(225,217,193,0.15)] shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] relative">
-      {/* View Selector Tabs */}
-      <div className="flex border-b border-[rgba(225,217,193,0.15)] bg-[#1D1714]/90 z-20">
-        <button
-          onClick={() => setViewMode("interactive")}
-          className={`flex-1 py-3 text-center text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 ${
-            viewMode === "interactive"
-              ? "bg-[#E2725B] text-white"
-              : "text-[#E1D9C1]/60 hover:text-[#E1D9C1] hover:bg-[#1D1714]/50"
-          }`}
-        >
-          <span>🗺️</span>
-          <span>Mapa Interactivo (Google Earth)</span>
-        </button>
-        <button
-          onClick={() => setViewMode("render3d")}
-          className={`flex-1 py-3 text-center text-xs font-bold uppercase tracking-wider transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 ${
-            viewMode === "render3d"
-              ? "bg-[#E2725B] text-white"
-              : "text-[#E1D9C1]/60 hover:text-[#E1D9C1] hover:bg-[#1D1714]/50"
-          }`}
-        >
-          <span>📸</span>
-          <span>Vista 3D Masterplan (Render)</span>
-        </button>
+    <section className="moon-paracas-map relative flex h-auto w-full flex-col overflow-hidden rounded-md border border-white/12 bg-[#101a1b] shadow-[0_24px_70px_rgba(0,0,0,0.32)] md:h-[790px]">
+      <div className="z-20 flex flex-col gap-4 border-b border-white/10 bg-[#101a1b] px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[9px] font-bold uppercase text-[#df8a6f]">Plano de lotes · Edición comercial</p>
+            <p className="mt-1 font-display text-xl font-semibold text-white">Seis aldeas alrededor de un Oasis · {PROJECT.areaLabel}</p>
+            {scene.lots.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Inventario técnico cargado">
+                <span className="inline-flex items-center gap-1.5 rounded border border-white/10 bg-white/5 px-2 py-1 text-[9px] font-semibold text-white/65">
+                  <BadgeCheck className="h-3 w-3 text-[#82ba8d]" aria-hidden="true" /> {inventorySummary.residentialCount} lotes
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded border border-white/10 bg-white/5 px-2 py-1 text-[9px] font-semibold text-white/65">
+                  <CarFront className="h-3 w-3 text-[#df8a6f]" aria-hidden="true" /> {inventorySummary.parkingCount} privadas + {inventorySummary.commonParkingCount} comunes
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded border border-white/10 bg-white/5 px-2 py-1 text-[9px] font-semibold text-white/65">
+                  <Ruler className="h-3 w-3 text-white/55" aria-hidden="true" /> 2.50 × 5.00 m
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded border border-[#82ba8d]/20 bg-[#82ba8d]/8 px-2 py-1 text-[9px] font-semibold text-[#b9d9bf]">
+                  <BadgeCheck className="h-3 w-3" aria-hidden="true" /> Domo Ø8 compatible · {inventorySummary.dome8Count} lotes
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded border border-[#df8a6f]/20 bg-[#df8a6f]/8 px-2 py-1 text-[9px] font-semibold text-[#f0b08c]">
+                  Lista vigente · {COMMERCIAL_PRICE_PERIOD_LABEL}
+                </span>
+              </div>
+            )}
+          </div>
+          <span className="inline-flex items-center gap-2 rounded-md border border-white/10 bg-white/5 px-3 py-2 text-[9px] font-bold uppercase text-white/55 lg:hidden">
+            <BadgeCheck className="h-3.5 w-3.5 text-[#82ba8d]" /> Plano vigente
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 rounded-md bg-white/5 p-1" aria-label="Alternar entre el plano y la inspiración arquitectónica">
+          <button
+            type="button"
+            aria-pressed={viewMode === "interactive"}
+            onClick={() => setViewMode("interactive")}
+            className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-[4px] px-4 text-[10px] font-bold uppercase transition-colors ${
+              viewMode === "interactive" ? "bg-[#c85b3e] text-white shadow-sm" : "text-white/55 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            <Map className="h-4 w-4" aria-hidden="true" /> Plano interactivo
+          </button>
+          <button
+            type="button"
+            data-testid="dome-concept-tab"
+            aria-pressed={viewMode === "render3d"}
+            onClick={() => setViewMode("render3d")}
+            className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-[4px] px-4 text-[10px] font-bold uppercase transition-colors ${
+              viewMode === "render3d" ? "bg-[#c85b3e] text-white shadow-sm" : "text-white/55 hover:bg-white/5 hover:text-white"
+            }`}
+          >
+            <House className="h-4 w-4" aria-hidden="true" /> Habitar el lote
+          </button>
+        </div>
       </div>
 
       {viewMode === "interactive" ? (
         <>
           <FiltersBar filters={filters} onChange={setFilters} />
-          <div className="moon-paracas-map__layout flex flex-1 min-h-0 relative flex-col md:flex-row">
-            <div className="moon-paracas-map__canvas relative flex-1 w-full h-[400px] sm:h-[500px] md:h-full md:w-auto md:min-w-0">
+          <div className="moon-paracas-map__layout relative flex min-h-[520px] flex-1 flex-col md:min-h-0 md:flex-row">
+            <div className="moon-paracas-map__canvas relative h-[520px] min-h-[520px] w-full shrink-0 flex-1 md:h-full md:min-h-0 md:w-auto md:min-w-0 md:shrink">
               <MapCanvas
                 scene={scene}
                 visibleLots={visibleLots}
@@ -91,19 +123,7 @@ export default function MoonParacasMap({
           </div>
         </>
       ) : (
-        <div className="flex-1 w-full min-h-[450px] bg-[#120F0D] flex items-center justify-center p-4 relative overflow-hidden group select-none">
-          <img
-            src="/images/masterplan_3d.jpg"
-            alt="Vista 3D Masterplan Moon Paracas"
-            className="max-w-full max-h-[85%] md:max-h-[90%] object-contain shadow-[0_16px_50px_rgba(0,0,0,0.8)] border border-[rgba(225,217,193,0.15)] transition-transform duration-500 hover:scale-[1.01]"
-          />
-          <div className="absolute bottom-4 left-4 right-4 bg-[#1D1714]/90 backdrop-blur-xl border border-[rgba(225,217,193,0.2)] p-4 text-xs text-[#E1D9C1] text-center font-sans shadow-lg max-w-2xl mx-auto">
-            <span className="font-bold text-white uppercase tracking-widest text-xs block mb-1">Plan Maestro Moon Paracas</span>
-            <span className="block text-[11px] text-[#E1D9C1]/80 leading-relaxed">
-              Vista tridimensional conceptual (3D Render) mostrando la distribución de las 11.2 hectáreas, el oasis de palmeras central con lagunas, club house y la urbanización geométrica de los lotes residenciales.
-            </span>
-          </div>
-        </div>
+        <DomeConceptPanel selectedLot={selectedLot} onBackToMap={() => setViewMode("interactive")} />
       )}
     </section>
   );

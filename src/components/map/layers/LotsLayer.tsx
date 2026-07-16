@@ -1,30 +1,31 @@
 import React, { useState } from "react";
-import { Lot, LotStatus } from "../../../types/map";
+import { Lot } from "../../../types/map";
 import { pathFromPolygon, centroid, getLotLayoutPoints } from "../../../lib/geometry";
-
-const statusConfig: Record<string, { fill: string; stroke: string; label: string }> = {
-  available: { fill: "#E1D9C1",  stroke: "#B8AF98", label: "DISPONIBLE" },
-  offer:     { fill: "#E2725B",  stroke: "#B04D3A", label: "EN OFERTA"  },
-  sold:      { fill: "#1D1714",  stroke: "#0F1622", label: "VENDIDO"    },
-  blocked:   { fill: "#382B23",  stroke: "#1D1714", label: "RESERVADO"  },
-  reserved:  { fill: "#382B23",  stroke: "#1D1714", label: "RESERVADO"  },
-};
+import { getMeterToSvgScale } from "../../../lib/terrainModel";
+import { getLotVisual, LotColorMode, MapDetailLevel, STATUS_VISUALS } from "../mapVisuals";
 
 export function LotsLayer({
   lots,
   selectedLotId,
-  onSelect
+  onSelect,
+  colorMode,
+  detailLevel,
+  baseMap,
 }: {
   lots: Lot[];
   selectedLotId?: string;
   onSelect: (lot: Lot) => void;
+  colorMode: LotColorMode;
+  detailLevel: MapDetailLevel;
+  baseMap: "roadmap" | "satellite";
 }) {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   return (
     <>
       {lots.map(lot => {
-        const cfg = statusConfig[lot.status] ?? statusConfig["available"];
+        const visual = getLotVisual(lot, colorMode);
+        const statusLabel = STATUS_VISUALS[lot.status]?.label ?? STATUS_VISUALS.available.label;
         const isSelected = selectedLotId === lot.id;
         const isHovered = hoveredId === lot.id;
 
@@ -32,49 +33,24 @@ export function LotsLayer({
         const isExternalParking = lot.typology === "parking-external";
         const isParking = isInternalParking || isExternalParking;
 
-        const isSoldOrReserved = lot.status === "sold" || lot.status === "reserved" || lot.status === "blocked";
-        let fill = isInternalParking ? "#b0a898" : isExternalParking ? "#5c6065" : cfg.fill;
-        let baseStroke = isInternalParking ? "#9b9383" : isExternalParking ? "#45484c" : cfg.stroke;
+        const fillOpacity = isParking
+          ? isSelected ? 0.92 : isHovered ? 0.82 : baseMap === "roadmap" ? 0.72 : 0.56
+          : isSelected ? 0.96 : isHovered ? 0.92 : baseMap === "roadmap" ? 0.86 : 0.72;
+        const strokeColor = isSelected ? "#FFF8EC" : lot.status === "offer" && colorMode === "typology" ? "#B94E35" : visual.stroke;
+        const strokeWidth = isSelected ? 3.2 : isHovered ? 2.3 : lot.status === "offer" && colorMode === "typology" ? 2.0 : 1.2;
 
-        if (isInternalParking && isSoldOrReserved) {
-          // If private parking is sold or reserved, use the status color
-          fill = cfg.fill;
-          baseStroke = cfg.stroke;
-        }
-
-        if (!isParking && (!isSoldOrReserved || lot.typology === "premium")) {
-          if (lot.typology === "premium") {
-            fill = "#d4af37";
-            baseStroke = "#9a7d25";
-          } else if (lot.typology === "tiny-house") {
-            fill = "#E07A5F"; // Orange coral
-            baseStroke = "#b34e36";
-          } else if (lot.typology === "zen") {
-            fill = "#D4A373"; // Tan
-            baseStroke = "#9d7148";
-          } else if (lot.typology === "adjustment") {
-            fill = "#b0ad9d"; // Warm grey
-            baseStroke = "#7a776a";
-          } else {
-            fill = "#748D70"; // Standard green
-            baseStroke = "#4c604a";
-          }
-        }
-
-        // Transparent tint for residential lots, and semi-transparent for parking
-        const fillOpacity = isParking ? (isSelected ? 0.8 : isHovered ? 0.7 : 0.5) : (isSelected ? 0.8 : isHovered ? 0.7 : 0.65);
-        const strokeColor = isSelected ? "#A67C52" : baseStroke;
-        const strokeWidth = isSelected ? 3.0 : isHovered ? 2.0 : 1.5;
-
-        // Only draw pin for lots in offer status to prevent cluttering lot numbers
-        const hasPin = !isParking && lot.status === "offer";
+        const hasPin = detailLevel === "close" && !isParking && lot.status === "offer";
         const center = hasPin ? centroid(lot.polygon) : { x: 0, y: 0 };
 
         return (
           <g key={lot.id}>
             <path
               d={pathFromPolygon(lot.polygon)}
-              fill={fill}
+              data-lot-id={lot.id}
+              role="button"
+              tabIndex={0}
+              aria-label={`${isParking ? "Cochera" : "Lote"} ${lot.number}, ${statusLabel}, ${lot.areaM2.toFixed(2)} metros cuadrados`}
+              fill={visual.fill}
               fillOpacity={fillOpacity}
               stroke={strokeColor}
               strokeWidth={strokeWidth}
@@ -82,26 +58,50 @@ export function LotsLayer({
               style={{
                 cursor: "pointer",
                 transition: "fill-opacity 200ms ease, stroke-width 200ms ease",
-                filter: isSelected ? "drop-shadow(0 2px 4px rgba(166,124,82,0.4))" : "none"
+                filter: isSelected ? "drop-shadow(0 2px 5px rgba(19,43,45,0.55))" : "none"
               }}
               onClick={() => onSelect(lot)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  onSelect(lot);
+                }
+              }}
               onMouseEnter={() => setHoveredId(lot.id)}
               onMouseLeave={() => setHoveredId(null)}
             >
-              <title>Lote {lot.number} — {cfg.label} — {lot.areaM2.toFixed(2)} m²</title>
+              <title>{isParking ? "Cochera" : "Lote"} {lot.number} · {statusLabel} · {lot.areaM2.toFixed(2)} m²</title>
             </path>
             
             {/* GEODESIC DOME AND DECORATION LAYER */}
-            {!isParking && (() => {
+            {!isParking && detailLevel !== "overview" && (() => {
               const layout = getLotLayoutPoints(lot.polygon);
+              const domeCenter = lot.buildableCircleCenter ?? layout.dome;
+              const domeRadius = ((lot.recommendedDomeDiameterM ?? 4) * getMeterToSvgScale()) / 2;
+              const domeScale = domeRadius / 3.2;
+              const clearRadius = ((lot.buildableCircleDiameterM ?? 0) * getMeterToSvgScale()) / 2;
               const lotHash = typeof lot.number === "number" ? lot.number : parseInt(String(lot.number).replace(/\D/g, "")) || 0;
               const decorType = lotHash % 20;
               
               return (
                 <>
                   {/* GEODESIC DOME ICON FOR RESIDENTIAL LOTS */}
+                  {detailLevel === "close" && clearRadius > 0 && (
+                    <circle
+                      cx={domeCenter.x}
+                      cy={domeCenter.y}
+                      r={clearRadius}
+                      fill="none"
+                      stroke={isSelected ? "rgba(255,248,236,0.9)" : "rgba(105,84,58,0.38)"}
+                      strokeWidth={isSelected ? 0.65 : 0.35}
+                      strokeDasharray="1.6 1.4"
+                      style={{ pointerEvents: "none" }}
+                    >
+                      <title>Huella circular disponible: Ø {lot.buildableCircleDiameterM?.toFixed(2)} m</title>
+                    </circle>
+                  )}
                   <g 
-                    transform={`translate(${layout.dome.x}, ${layout.dome.y})`}
+                    transform={`translate(${domeCenter.x}, ${domeCenter.y}) scale(${domeScale})`}
                     style={{ pointerEvents: "none" }}
                   >
                     {/* Shaded dome body with 3D radial gradient */}
@@ -143,7 +143,7 @@ export function LotsLayer({
                   </g>
 
                   {/* SUBTLE LOT DECORATIONS — only ~25% of lots get one */}
-                  {decorType <= 4 && (
+                  {detailLevel === "close" && decorType <= 4 && (
                     <g transform={`translate(${layout.decor.x}, ${layout.decor.y}) scale(0.7)`} style={{ pointerEvents: "none" }}>
                       {decorType === 0 && (
                         /* Firepit */

@@ -1,103 +1,109 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, updateDoc, getDoc } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+import { InvalidWebhookSignatureError, WebhookSignatureValidator } from "mercadopago";
+import { adminDb, FieldValue } from "../_lib/firebase-admin.js";
+import { observeRequest } from "../_lib/logger.js";
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+const TERMINAL_FAILURES = new Set(["rejected", "cancelled", "refunded", "charged_back"]);
 
-export default async function handler(req, res) {
-  // Always return 200 OK immediately to Mercado Pago to acknowledge notification receipt
-  res.status(200).send("OK");
+async function reconcilePayment(payment) {
+  const reservationId = String(payment.external_reference || payment.metadata?.reservation_id || "");
+  if (!reservationId) return;
 
-  if (req.method !== 'POST') {
-    return;
-  }
+  const reservationRef = adminDb.collection("reservations").doc(reservationId);
+  await adminDb.runTransaction(async (transaction) => {
+    const reservationSnapshot = await transaction.get(reservationRef);
+    if (!reservationSnapshot.exists) return;
 
-  const { type, data } = req.body;
+    const reservation = reservationSnapshot.data();
+    const lotId = reservation.lotId;
+    const lotCollection = reservation.lotCollection || (lotId?.startsWith("D-") ? "dome_lots" : "lots");
+    if (!lotId || payment.metadata?.lot_id && payment.metadata.lot_id !== lotId) {
+      throw new Error("El pago no coincide con el lote de la reserva.");
+    }
 
-  // We are interested in payment transactions
-  if (type === 'payment' && data && data.id) {
-    const paymentId = data.id;
-    const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
-    if (!accessToken) {
-      console.error("MERCADO_PAGO_ACCESS_TOKEN is not configured.");
+    const lotRef = adminDb.collection(lotCollection).doc(lotId);
+    const lotSnapshot = await transaction.get(lotRef);
+    const common = {
+      mpPaymentId: String(payment.id),
+      mpStatus: payment.status,
+      mpStatusDetail: payment.status_detail || "",
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+
+    if (payment.status === "approved") {
+      transaction.set(lotRef, {
+        status: "reserved",
+        pendingReservationId: FieldValue.delete(),
+        holdExpiresAt: FieldValue.delete(),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      transaction.set(reservationRef, {
+        ...common,
+        status: "paid",
+        paidAt: FieldValue.serverTimestamp(),
+        mpPaymentType: payment.payment_type_id || "",
+        mpPaymentMethod: payment.payment_method_id || "",
+        mpNetAmount: payment.transaction_details?.net_received_amount ?? payment.transaction_amount,
+      }, { merge: true });
       return;
     }
 
-    try {
-      // Fetch payment details directly from Mercado Pago API using the token
-      const mpResponse = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
-        headers: {
-          "Authorization": `Bearer ${accessToken}`
-        }
-      });
-
-      if (!mpResponse.ok) {
-        console.error(`Failed to fetch payment details for ID ${paymentId} from Mercado Pago.`);
-        return;
+    if (TERMINAL_FAILURES.has(payment.status)) {
+      if (lotSnapshot.data()?.pendingReservationId === reservationId) {
+        transaction.set(lotRef, {
+          status: "available",
+          pendingReservationId: FieldValue.delete(),
+          holdExpiresAt: FieldValue.delete(),
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
       }
-
-      const paymentData = await mpResponse.json();
-
-      const reservationId = paymentData.external_reference;
-      const paymentStatus = paymentData.status; // e.g. "approved", "rejected", "pending"
-      
-      let lotId = paymentData.metadata?.lot_id || null;
-      if (paymentData.items && paymentData.items.length > 0) {
-        const itemId = paymentData.items[0].id;
-        if (itemId && itemId.startsWith("reserve-")) {
-          lotId = itemId.substring(8); // e.g. "LOTE-12"
-        }
-      }
-
-      if (paymentStatus === 'approved' && reservationId && lotId) {
-        console.log(`Webhook: Payment approved for reservation ${reservationId}, lot ${lotId}`);
-
-        // 1. Update lot status to reserved
-        const lotCollection = lotId.startsWith("D-") ? "dome_lots" : "lots";
-        const lotRef = doc(db, lotCollection, lotId);
-        await updateDoc(lotRef, {
-          status: "reserved"
-        });
-
-        // 2. Update reservation record in Firestore
-        const resRef = doc(db, "reservations", reservationId);
-        await updateDoc(resRef, {
-          status: "paid",
-          paidAt: new Date().toISOString(),
-          mpPaymentId: paymentId,
-          mpPaymentType: paymentData.payment_type_id,
-          mpPaymentMethod: paymentData.payment_method_id,
-          mpNetAmount: paymentData.transaction_details?.net_received_amount || 1000
-        });
-      } else if (paymentStatus === 'approved' && reservationId) {
-        const resRef = doc(db, "reservations", reservationId);
-        const resSnap = await getDoc(resRef);
-        const reservationLotId = resSnap.exists() ? resSnap.data().lotId : null;
-
-        if (reservationLotId) {
-          const lotCollection = reservationLotId.startsWith("D-") ? "dome_lots" : "lots";
-          await updateDoc(doc(db, lotCollection, reservationLotId), { status: "reserved" });
-          await updateDoc(resRef, {
-            status: "paid",
-            paidAt: new Date().toISOString(),
-            mpPaymentId: paymentId,
-            mpPaymentType: paymentData.payment_type_id,
-            mpPaymentMethod: paymentData.payment_method_id,
-            mpNetAmount: paymentData.transaction_details?.net_received_amount || 1000
-          });
-        }
-      } else if ((paymentStatus === 'rejected' || paymentStatus === 'cancelled') && reservationId) {
-        console.log(`Webhook: Payment rejected/cancelled for reservation ${reservationId}`);
-        const resRef = doc(db, "reservations", reservationId);
-        await updateDoc(resRef, {
-          status: "failed",
-          failedAt: new Date().toISOString()
-        });
-      }
-    } catch (error) {
-      console.error("Error processing Mercado Pago webhook notification:", error);
+      transaction.set(reservationRef, {
+        ...common,
+        status: payment.status === "rejected" || payment.status === "cancelled" ? "failed" : payment.status,
+      }, { merge: true });
+      return;
     }
+
+    transaction.set(reservationRef, { ...common, status: "pending" }, { merge: true });
+  });
+}
+
+export default async function handler(req, res) {
+  const log = observeRequest(req, res, "/api/webhooks/mercadopago");
+  res.setHeader("Cache-Control", "no-store");
+  if (req.method !== "POST") return res.status(405).json({ error: "Método no permitido." });
+
+  const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
+  const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
+  if (!accessToken || !secret) return res.status(503).json({ error: "Webhook no configurado." });
+
+  const dataId = String(req.query?.["data.id"] || req.body?.data?.id || "");
+  try {
+    WebhookSignatureValidator.validate({
+      xSignature: req.headers["x-signature"],
+      xRequestId: req.headers["x-request-id"],
+      dataId,
+      secret,
+    });
+  } catch (error) {
+    if (error instanceof InvalidWebhookSignatureError) {
+      log.error(error, "webhook_signature_invalid", { paymentId: dataId });
+      return res.status(401).json({ error: "Firma de webhook inválida." });
+    }
+    log.error(error, "webhook_signature_validation_failed", { paymentId: dataId });
+    return res.status(400).json({ error: "No se pudo validar la notificación." });
+  }
+
+  if (req.body?.type !== "payment" || !dataId) return res.status(200).json({ received: true });
+
+  try {
+    const response = await fetch(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(dataId)}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!response.ok) throw new Error(`Mercado Pago respondió ${response.status}.`);
+    await reconcilePayment(await response.json());
+    return res.status(200).json({ received: true });
+  } catch (error) {
+    log.error(error, "webhook_reconciliation_failed", { paymentId: dataId });
+    return res.status(500).json({ error: "No se pudo conciliar el pago." });
   }
 }

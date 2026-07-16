@@ -2,28 +2,22 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isValidLot(data) {
-      return data.keys().hasAll(['id', 'number', 'area', 'status', 'price', 'elevation', 'quadrant', 'x', 'y', 'width', 'height', 'row', 'hasSolarOpt', 'distanceToPool', 'rotation'])
-        && data.id is string && data.id.size() <= 64
-        && data.number is number
-        && data.area is number
-        && data.status is string && data.status.size() <= 20
-        && data.price is number;
-    }
-
     match /lots/{lotId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if false;
     }
 
     match /dome_lots/{lotId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if false;
     }
 
     match /reservations/{reservationId} {
-      allow read: if true;
-      allow write: if true;
+      allow read, write: if false;
+    }
+
+    match /leads/{leadId} {
+      allow read, write: if false;
     }
 
     // Block everything else by default

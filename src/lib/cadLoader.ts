@@ -2,6 +2,7 @@ import { Lot, LotStatus, LotTypology, XY } from "../types/map";
 import { shoelaceArea, isPointInPolygon, centroid } from "./geometry";
 import { METER_TO_SVG_SCALE, getLocalTerrainBounds } from "./terrainModel";
 import { BLOCK_SPECS } from "../data/business";
+import { COMMERCIAL_PRICE_VERSION, getLotPricePerM2 } from "../config/pricing";
 
 interface CadFeatureProperties {
   stableId: string;
@@ -127,21 +128,26 @@ export function validateAndLoadCadLots(geoJson: any, currentVersion: string = "1
       continue;
     }
 
+    const typology = props.typology as LotTypology;
+    const price = Math.round(realArea * getLotPricePerM2(typology));
+
     lots.push({
       id: compositeLotId,
       blockId: props.blockId,
-      typology: props.typology as LotTypology,
+      typology,
       status: props.status as LotStatus,
       areaM2: realArea,
       polygon: polygon,
-      priceLabel: props.typology === "premium" ? "Consultar" : "Desde S/ 12,000",
-      price: props.typology === "premium" ? 25000 : 12000,
+      priceLabel: `S/ ${price.toLocaleString("es-PE")}`,
+      price,
       number: parseInt(props.lotId.replace(/\D/g, ''), 10) || (i + 1),
       quadrant: props.blockId,
       area: realArea,
       elevation: 108,
       distanceToPool: 40,
-      hubDistance: 20
+      hubDistance: 20,
+      price_soles: price,
+      commercialPriceVersion: COMMERCIAL_PRICE_VERSION,
     });
   }
 

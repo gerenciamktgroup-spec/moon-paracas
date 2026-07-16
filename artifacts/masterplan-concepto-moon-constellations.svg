@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+  <title id="title">Esquema conceptual Moon Constellations</title>
+  <desc id="desc">Diagrama no catastral de seis aldeas peatonales, oasis central, vía vehicular perimetral y estacionamientos distribuidos.</desc>
+  <defs>
+    <linearGradient id="sand" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f3ead2"/>
+      <stop offset="1" stop-color="#d8c8a5"/>
+    </linearGradient>
+    <linearGradient id="oasis" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#648b82"/>
+      <stop offset="1" stop-color="#274a48"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#1b263b" flood-opacity=".16"/>
+    </filter>
+    <style>
+      .label{font-family:Montserrat,Arial,sans-serif;fill:#1b263b;font-size:18px;font-weight:700;letter-spacing:.08em}
+      .small{font-family:Montserrat,Arial,sans-serif;fill:#dfe5df;font-size:13px;font-weight:600;letter-spacing:.04em}
+      .legend-title{font-family:Montserrat,Arial,sans-serif;fill:#f7f2e7;font-size:18px;font-weight:700;letter-spacing:.08em}
+      .village{fill:#efe2c7;stroke:#bb5638;stroke-width:3}
+      .lot{fill:none;stroke:#c98870;stroke-width:1.4;opacity:.82}
+      .walk{fill:none;stroke:#f7f2e7;stroke-width:10;stroke-linecap:round;stroke-dasharray:2 16}
+      .parking{fill:#e2725b;stroke:#fff7eb;stroke-width:2}
+    </style>
+  </defs>
+  <rect width="1200" height="900" fill="#111b2c"/>
+  <text x="70" y="72" fill="#f7f2e7" font-family="Cormorant Garamond,Georgia,serif" font-size="42">Moon Constellations</text>
+  <text x="72" y="104" fill="#d5aa83" font-family="Montserrat,Arial,sans-serif" font-size="13" letter-spacing=".18em">ESQUEMA ESPACIAL · NO CATASTRAL</text>
+
+  <!-- Lindero basado en la proporción del polígono UTM actual -->
+  <polygon points="520,812 172,528 528,106 930,382" fill="url(#sand)" stroke="#f7f2e7" stroke-width="4" filter="url(#shadow)"/>
+  <!-- Órbita vehicular -->
+  <polygon points="519,772 218,522 535,151 882,389" fill="none" stroke="#1b263b" stroke-width="22" stroke-linejoin="round"/>
+  <polygon points="519,772 218,522 535,151 882,389" fill="none" stroke="#d5aa83" stroke-width="2" stroke-dasharray="13 12" stroke-linejoin="round"/>
+
+  <!-- Eje peatonal -->
+  <path d="M392 665 C465 610 468 555 512 503 C555 450 619 419 696 344" class="walk"/>
+  <path d="M327 488 C408 485 438 476 511 503 C585 528 633 548 724 523" class="walk"/>
+
+  <!-- Seis aldeas -->
+  <g transform="translate(388 637) rotate(14)">
+    <ellipse rx="92" ry="63" class="village"/>
+    <path d="M-80 0H80M0-54V54M-60-38L60 38M-61 38L61-38" class="lot"/>
+    <text x="0" y="5" text-anchor="middle" class="label">ALDEA 1</text>
+  </g>
+  <g transform="translate(553 646) rotate(-13)">
+    <ellipse rx="92" ry="63" class="village"/>
+    <path d="M-80 0H80M0-54V54M-60-38L60 38M-61 38L61-38" class="lot"/>
+    <text x="0" y="5" text-anchor="middle" class="label">ALDEA 2</text>
+  </g>
+  <g transform="translate(724 511) rotate(-31)">
+    <ellipse rx="104" ry="68" class="village"/>
+    <path d="M-91 0H91M0-59V59M-68-41L68 41M-69 41L69-41" class="lot"/>
+    <text x="0" y="5" text-anchor="middle" class="label">ALDEA 3</text>
+  </g>
+  <g transform="translate(694 325) rotate(19)">
+    <ellipse rx="105" ry="68" class="village"/>
+    <path d="M-92 0H92M0-59V59M-68-41L68 41M-70 41L70-41" class="lot"/>
+    <text x="0" y="5" text-anchor="middle" class="label">ALDEA 4</text>
+  </g>
+  <g transform="translate(515 274) rotate(-13)">
+    <ellipse rx="105" ry="68" class="village"/>
+    <path d="M-92 0H92M0-59V59M-68-41L68 41M-70 41L70-41" class="lot"/>
+    <text x="0" y="5" text-anchor="middle" class="label">ALDEA 5</text>
+  </g>
+  <g transform="translate(356 430) rotate(27)">
+    <ellipse rx="96" ry="65" class="village"/>
+    <path d="M-84 0H84M0-56V56M-62-39L62 39M-64 39L64-39" class="lot"/>
+    <text x="0" y="5" text-anchor="middle" class="label">ALDEA 6</text>
+  </g>
+
+  <!-- Oasis -->
+  <g transform="translate(528 473)" filter="url(#shadow)">
+    <ellipse rx="87" ry="65" fill="url(#oasis)" stroke="#f7f2e7" stroke-width="4"/>
+    <ellipse rx="51" ry="29" fill="#8bb4aa" opacity=".8"/>
+    <text x="0" y="7" text-anchor="middle" fill="#fff7eb" font-family="Cormorant Garamond,Georgia,serif" font-size="29">Oasis</text>
+  </g>
+
+  <!-- Estaciones de estacionamiento, 12 grupos conceptuales -->
+  <g>
+    <rect x="279" y="594" width="54" height="16" rx="4" class="parking" transform="rotate(39 306 602)"/>
+    <rect x="342" y="681" width="54" height="16" rx="4" class="parking" transform="rotate(39 369 689)"/>
+    <rect x="446" y="736" width="54" height="16" rx="4" class="parking" transform="rotate(39 473 744)"/>
+    <rect x="575" y="695" width="54" height="16" rx="4" class="parking" transform="rotate(-38 602 703)"/>
+    <rect x="697" y="589" width="54" height="16" rx="4" class="parking" transform="rotate(-38 724 597)"/>
+    <rect x="790" y="485" width="54" height="16" rx="4" class="parking" transform="rotate(-38 817 493)"/>
+    <rect x="784" y="372" width="54" height="16" rx="4" class="parking" transform="rotate(34 811 380)"/>
+    <rect x="671" y="294" width="54" height="16" rx="4" class="parking" transform="rotate(34 698 302)"/>
+    <rect x="557" y="214" width="54" height="16" rx="4" class="parking" transform="rotate(34 584 222)"/>
+    <rect x="440" y="230" width="54" height="16" rx="4" class="parking" transform="rotate(-49 467 238)"/>
+    <rect x="337" y="351" width="54" height="16" rx="4" class="parking" transform="rotate(-49 364 359)"/>
+    <rect x="239" y="466" width="54" height="16" rx="4" class="parking" transform="rotate(-49 266 474)"/>
+  </g>
+
+  <g transform="translate(962 180)">
+    <text class="legend-title">SISTEMA</text>
+    <line x1="0" y1="34" x2="48" y2="34" stroke="#d5aa83" stroke-width="10"/>
+    <text x="64" y="40" class="small" fill="#dfe5df">Órbita vehicular</text>
+    <rect x="0" y="64" width="48" height="16" rx="4" class="parking"/>
+    <text x="64" y="78" class="small" fill="#dfe5df">12 estaciones</text>
+    <line x1="0" y1="110" x2="48" y2="110" class="walk"/>
+    <text x="64" y="116" class="small" fill="#dfe5df">Red peatonal</text>
+    <ellipse cx="24" cy="154" rx="24" ry="16" class="village"/>
+    <text x="64" y="160" class="small" fill="#dfe5df">6 aldeas · 48 lotes</text>
+    <ellipse cx="24" cy="198" rx="24" ry="16" fill="url(#oasis)"/>
+    <text x="64" y="204" class="small" fill="#dfe5df">Oasis común</text>
+  </g>
+
+  <g transform="translate(940 640)">
+    <text fill="#f7f2e7" font-family="Cormorant Garamond,Georgia,serif" font-size="34">288 lotes</text>
+    <text y="40" fill="#d5aa83" font-family="Montserrat,Arial,sans-serif" font-size="14" letter-spacing=".08em">288 COCHERAS PRIVADAS</text>
+    <text y="67" fill="#d5aa83" font-family="Montserrat,Arial,sans-serif" font-size="14" letter-spacing=".08em">18 COCHERAS COMUNES</text>
+    <text y="109" fill="#aebbb6" font-family="Montserrat,Arial,sans-serif" font-size="12">Lindero proporcional al UTM actual.</text>
+    <text y="130" fill="#aebbb6" font-family="Montserrat,Arial,sans-serif" font-size="12">La geometría de lotes se define en CAD.</text>
+  </g>
+</svg>

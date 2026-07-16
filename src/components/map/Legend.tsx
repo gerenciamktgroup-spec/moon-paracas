@@ -1,46 +1,41 @@
 import React, { useState } from "react";
+import { ChevronUp, Layers3 } from "lucide-react";
+import { LotColorMode, STATUS_LEGEND, TYPOLOGY_LEGEND } from "./mapVisuals";
 
-export function Legend() {
+export function Legend({ colorMode }: { colorMode: LotColorMode }) {
   const [isOpen, setIsOpen] = useState(false);
+  const items = colorMode === "typology" ? TYPOLOGY_LEGEND : STATUS_LEGEND;
 
   return (
-    <div className="absolute bottom-8 left-8 z-20 bg-white/90 backdrop-blur-md border border-[var(--color-desert-taupe)] shadow-lg font-sans transition-all duration-300 pointer-events-auto rounded-sm">
-      {/* Header / Toggle Button */}
+    <div className="pointer-events-auto absolute bottom-4 left-4 z-20 overflow-hidden rounded-md border border-[#18353b]/15 bg-[#f7f5ef]/95 font-sans text-[#18353b] shadow-[0_12px_35px_rgba(16,26,27,0.2)] backdrop-blur-md transition-all duration-300">
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="px-4 py-2.5 flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-widest text-[var(--color-desert-charcoal)] hover:bg-[var(--color-desert-sand)] transition-colors cursor-pointer rounded-sm focus:outline-none"
+        className="flex min-h-11 w-full items-center justify-between gap-4 px-4 text-[10px] font-bold uppercase transition-colors hover:bg-[#e8e7df]"
+        aria-expanded={isOpen}
       >
         <div className="flex items-center gap-2">
-          <span className="text-stone-500 text-[11px]">🎨</span>
-          <span>Leyenda</span>
+          <Layers3 className="h-4 w-4 text-[#b55034]" />
+          <span>Leyenda · {colorMode === "typology" ? "Tipologías" : "Estados"}</span>
         </div>
-        <span className="text-[8px] opacity-70 transition-transform duration-200" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
-          ▼
-        </span>
+        <ChevronUp className={`h-4 w-4 transition-transform ${isOpen ? "" : "rotate-180"}`} />
       </button>
 
-      {/* Expanded Content */}
       {isOpen && (
-        <div className="p-4 border-t border-[var(--color-desert-taupe)]/50 flex flex-col gap-3.5 bg-white/95 animate-fade-in">
-          <div className="flex items-center gap-3">
-            <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-status-available)] block shadow-sm border border-[rgba(0,0,0,0.1)]"></span>
-            <span className="text-[var(--color-desert-charcoal)] text-[9px] font-bold uppercase tracking-wider">Disponible</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-status-offer)] block shadow-sm border border-[rgba(0,0,0,0.1)]"></span>
-            <span className="text-[var(--color-desert-charcoal)] text-[9px] font-bold uppercase tracking-wider">En Oferta</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-status-sold)] block shadow-sm border border-[rgba(0,0,0,0.1)]"></span>
-            <span className="text-[var(--color-desert-charcoal)] text-[9px] font-bold uppercase tracking-wider">Vendido</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="w-2.5 h-2.5 rounded-full bg-[var(--color-status-blocked)] block shadow-sm border border-[rgba(0,0,0,0.1)]"></span>
-            <span className="text-[var(--color-desert-charcoal)] text-[9px] font-bold uppercase tracking-wider">Reservado</span>
-          </div>
+        <div className="grid min-w-[245px] gap-3 border-t border-[#18353b]/12 bg-white/80 p-4">
+          {items.map((item) => (
+            <div key={item.label} className="flex items-center gap-3">
+              <span className="block h-3 w-3 rounded-[3px] border" style={{ backgroundColor: item.fill, borderColor: item.stroke }} />
+              <span className="text-[10px] font-semibold text-[#3f514f]">{item.label}</span>
+            </div>
+          ))}
+          {colorMode === "typology" && (
+            <p className="border-t border-[#18353b]/10 pt-3 text-[9px] leading-4 text-[#6a7470]">
+              Reservados y vendidos se muestran en tonos neutros.
+            </p>
+          )}
         </div>
       )}
     </div>
   );
 }
-

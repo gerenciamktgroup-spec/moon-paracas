@@ -1,4 +1,5 @@
-import { BlockPolygon, Lot, LotStatus, LotTypology, XY } from "../types/map";
+import { BlockPolygon, Lot, LotStatus, LotTypology, Road, XY } from "../types/map";
+import { COMMERCIAL_PRICE_VERSION, getLotPricePerM2, PRIVATE_PARKING_PRICE_PEN } from "../config/pricing";
 import { BLOCK_SPECS } from "../data/business";
 import { shoelaceArea, centroid, isPointInPolygon } from "./geometry";
 import { getMeterToSvgScale, buildTerrainScene } from "./terrainModel";
@@ -6,6 +7,7 @@ import { slicePolyRing, getPointOnPoly, getPointAndNormalOnPoly } from "./curve"
 import { BAND_BLOCKS, BAND_OFFSETS, getBandPoint, globalOasisBoundary, getCurvedD } from "./blockModel";
 import { checkCollision, assertInsidePerimeter } from "./spatialAnalyzer";
 import lotsStatusMap from "../data/lots_status.json";
+import { buildRoads } from "./roadModel";
 
 export interface GeospatialValidator {
   validateCollision(polygon: XY[], obstacles: XY[][], shrinkM?: number): boolean;
@@ -280,7 +282,7 @@ export function buildLots(
       let status: LotStatus = "available";
 
       // ── PRICING — Fase 0 / Revista Costos ────────────────────────────────
-      const rate = finalTypology === "premium" ? 170 : 120;
+      const rate = getLotPricePerM2(finalTypology);
       const price = Math.round(roundedArea * rate);
       const priceLabel = `S/ ${price.toLocaleString('es-PE', {maximumFractionDigits:0})}`;
 
@@ -341,6 +343,7 @@ export function buildLots(
         frontage: frontage,
         depth: depth,
         price_soles: price,
+        commercialPriceVersion: COMMERCIAL_PRICE_VERSION,
         parking_type: assignedParkingType,
         walk_distance_parking_meters: minParkDist,
         walk_distance_oasis_meters: distToPool
@@ -353,190 +356,235 @@ export function buildLots(
   return lots;
 }
 
+export function attachParkingMetrics(residentialLots: Lot[], parkings: Lot[]): Lot[] {
+  if (parkings.length === 0) return residentialLots;
+  const scale = getMeterToSvgScale();
+  const parkingCenters = parkings.map((parking) => ({ parking, center: centroid(parking.polygon) }));
+
+  return residentialLots.map((lot) => {
+    const lotCenter = centroid(lot.polygon);
+    let closest = parkingCenters[0];
+    let distancePx = Number.POSITIVE_INFINITY;
+    for (const candidate of parkingCenters) {
+      const candidateDistance = Math.hypot(lotCenter.x - candidate.center.x, lotCenter.y - candidate.center.y);
+      if (candidateDistance < distancePx) {
+        distancePx = candidateDistance;
+        closest = candidate;
+      }
+    }
+    const distanceM = Math.min(145, Math.round(distancePx / scale));
+    return {
+      ...lot,
+      hubDistance: distanceM,
+      parking_type: closest.parking.parking_type,
+      walk_distance_parking_meters: distanceM,
+    };
+  });
+}
+
 export function buildParkingLots(
   innerBuffer: XY[],
   obstacles: XY[][] = [],
-  roadPolys: XY[][] = []
+  _roadPolys: XY[][] = [],
+  roadNetwork: Road[] = []
  ): Lot[] {
   const scale = getMeterToSvgScale();
   const lots: Lot[] = [];
-  let parkingCount = 1;
- 
-  // ── PARKING HUB GEOMETRY: 4 × L-shaped corner hubs ─────────────────────────
-  interface HubDef {
-    prefix: string;
-    quadrant: string;
-    parking_type: "externo_ingreso" | "periferico_interno";
-    typology: LotTypology;
-    arm1: { tStart: number; tEnd: number; dStart: number; dEnd: number; rows: number };
-    arm2?: { tStart: number; tEnd: number; dStart: number; dEnd: number; rows: number };
-  }
- 
-  const hubs: HubDef[] = [
-    {
-      prefix: "SW-", quadrant: "PARKING_SW",
-      parking_type: "externo_ingreso", typology: "parking",
-      arm1: { tStart: 0.012, tEnd: 0.042, dStart:   1.0, dEnd:  55.0, rows: 2 },
-    },
-    {
-      prefix: "SE-", quadrant: "PARKING_SE",
-      parking_type: "externo_ingreso", typology: "parking",
-      arm1: { tStart: 0.012, tEnd: 0.042, dStart: 170.0, dEnd: 252.0, rows: 2 },
-    },
-    {
-      prefix: "NW-", quadrant: "PARKING_NW",
-      parking_type: "periferico_interno", typology: "parking",
-      // arm1: Spans left half of the back border, meeting the center (placed behind the road)
-      arm1: { tStart: 0.985, tEnd: 0.985, dStart:   1.0, dEnd: 127.0, rows: 1 },
-      arm2: { tStart: 0.877, tEnd: 0.918, dStart:   1.0, dEnd:  57.0, rows: 3 },
-    },
-    {
-      prefix: "NE-", quadrant: "PARKING_NE",
-      parking_type: "periferico_interno", typology: "parking",
-      // arm1: Spans right half of the back border, starting at the center (placed behind the road)
-      arm1: { tStart: 0.985, tEnd: 0.985, dStart: 127.0, dEnd: 254.0, rows: 1 },
-      arm2: { tStart: 0.875, tEnd: 0.916, dStart: 197.0, dEnd: 254.5, rows: 3 },
-    },
-  ];
+  const roads = roadNetwork.length > 0 ? roadNetwork : buildRoads(innerBuffer);
+  const protectedObstacles = obstacles.map((polygon) => ({
+    polygon,
+    minX: Math.min(...polygon.map((point) => point.x)),
+    maxX: Math.max(...polygon.map((point) => point.x)),
+    minY: Math.min(...polygon.map((point) => point.y)),
+    maxY: Math.max(...polygon.map((point) => point.y)),
+  }));
 
-  function isAdjacentToRoad(polygon: XY[], roadPolysList: XY[][], sScale: number): boolean {
-    if (roadPolysList.length === 0) return true;
-    const threshold = 45.0 * sScale; // 45 meters threshold
-    for (const pt of polygon) {
-      for (const roadPoly of roadPolysList) {
-        for (const rPt of roadPoly) {
-          const d = Math.hypot(pt.x - rPt.x, pt.y - rPt.y);
-          if (d <= threshold) {
-            return true;
-          }
-        }
+  function polygonsOverlap(a: XY[], b: XY[]): boolean {
+    const orientation = (p: XY, q: XY, r: XY) => (q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x);
+    const onSegment = (p: XY, q: XY, r: XY) => (
+      q.x >= Math.min(p.x, r.x) - 1e-7 && q.x <= Math.max(p.x, r.x) + 1e-7
+      && q.y >= Math.min(p.y, r.y) - 1e-7 && q.y <= Math.max(p.y, r.y) + 1e-7
+    );
+    const segmentsIntersect = (p1: XY, p2: XY, q1: XY, q2: XY) => {
+      const o1 = orientation(p1, p2, q1);
+      const o2 = orientation(p1, p2, q2);
+      const o3 = orientation(q1, q2, p1);
+      const o4 = orientation(q1, q2, p2);
+      if ((o1 > 0) !== (o2 > 0) && (o3 > 0) !== (o4 > 0)) return true;
+      if (Math.abs(o1) < 1e-7 && onSegment(p1, q1, p2)) return true;
+      if (Math.abs(o2) < 1e-7 && onSegment(p1, q2, p2)) return true;
+      if (Math.abs(o3) < 1e-7 && onSegment(q1, p1, q2)) return true;
+      return Math.abs(o4) < 1e-7 && onSegment(q1, p2, q2);
+    };
+    for (let aIndex = 0; aIndex < a.length; aIndex += 1) {
+      const aNext = (aIndex + 1) % a.length;
+      for (let bIndex = 0; bIndex < b.length; bIndex += 1) {
+        const bNext = (bIndex + 1) % b.length;
+        if (segmentsIntersect(a[aIndex], a[aNext], b[bIndex], b[bNext])) return true;
       }
     }
-    return false;
+    return isPointInPolygon(a[0], b) || isPointInPolygon(b[0], a);
   }
 
-  function createParkingLot(
-    prefix: string,
-    t: number,
-    d: number,
-    idNum: number,
-    quadrant: string,
-    parking_type: string,
-    typology: LotTypology = "parking"
-  ): Lot {
-    const curved_d = getCurvedD(t, d);
-    const center = getBandPoint(innerBuffer, t, curved_d, scale);
-    const nextP  = getBandPoint(innerBuffer, t, curved_d + 1, scale);
-    const angle  = Math.atan2(nextP.y - center.y, nextP.x - center.x);
+  function collidesWithProtectedGeometry(polygon: XY[]): boolean {
+    const minX = Math.min(...polygon.map((point) => point.x));
+    const maxX = Math.max(...polygon.map((point) => point.x));
+    const minY = Math.min(...polygon.map((point) => point.y));
+    const maxY = Math.max(...polygon.map((point) => point.y));
+    return protectedObstacles.some((obstacle) => (
+      minX <= obstacle.maxX && maxX >= obstacle.minX && minY <= obstacle.maxY && maxY >= obstacle.minY
+      && polygonsOverlap(polygon, obstacle.polygon)
+    ));
+  }
 
-    // True Cartesian 2.5m × 5.0m stall
-    const wPx = (2.5 * scale) / 2;
-    const dPx = (5.0 * scale) / 2;
+  type ParkingType = "externo_ingreso" | "periferico_interno";
+  interface ParkingRun {
+    roadId: string;
+    side: -1 | 1;
+    startM: number;
+    endM: number;
+    count: number;
+    quadrant: string;
+    legacyPrefix: string;
+    parkingType: ParkingType;
+  }
 
-    const cosA = Math.cos(angle);
-    const sinA = Math.sin(angle);
+  // The inventory defines 138 stalls. The layout reserves clear areas at the
+  // arrival split, road ends and the midpoint of the rear service road.
+  const runs: ParkingRun[] = [
+    { roadId: "BOULEVARD_FORK_L", side: -1, startM: 8, endM: 85, count: 16, quadrant: "PARKING_SW", legacyPrefix: "SW-", parkingType: "externo_ingreso" },
+    { roadId: "BOULEVARD_FORK_L", side: 1, startM: 8, endM: 85, count: 6, quadrant: "PARKING_SW", legacyPrefix: "SW-", parkingType: "externo_ingreso" },
+    { roadId: "BOULEVARD_FORK_R", side: -1, startM: 8, endM: 96.7, count: 16, quadrant: "PARKING_SE", legacyPrefix: "SE-", parkingType: "externo_ingreso" },
+    { roadId: "BOULEVARD_FORK_R", side: 1, startM: 8, endM: 96.7, count: 17, quadrant: "PARKING_SE", legacyPrefix: "SE-", parkingType: "externo_ingreso" },
+    { roadId: "CROSS_ROAD_BACK", side: -1, startM: 8, endM: 255.1, count: 83, quadrant: "PARKING_NW", legacyPrefix: "NW-", parkingType: "periferico_interno" },
+  ];
 
+  function pointAndTangentAtDistance(path: XY[], distanceM: number): { point: XY; tangent: XY } {
+    let remaining = distanceM * scale;
+    for (let index = 1; index < path.length; index += 1) {
+      const previous = path[index - 1];
+      const current = path[index];
+      const dx = current.x - previous.x;
+      const dy = current.y - previous.y;
+      const segmentLength = Math.hypot(dx, dy);
+      if (remaining <= segmentLength || index === path.length - 1) {
+        const ratio = Math.min(1, Math.max(0, remaining / (segmentLength || 1)));
+        return {
+          point: { x: previous.x + dx * ratio, y: previous.y + dy * ratio },
+          tangent: { x: dx / (segmentLength || 1), y: dy / (segmentLength || 1) },
+        };
+      }
+      remaining -= segmentLength;
+    }
+    return { point: path[0], tangent: { x: 1, y: 0 } };
+  }
+
+  function createParkingLot(run: ParkingRun, road: Road, stationM: number, idNum: number): Lot {
+    const { point, tangent } = pointAndTangentAtDistance(road.path, stationM);
+    const normal = { x: -tangent.y * run.side, y: tangent.x * run.side };
+    const curbClearanceM = 0.55;
+    const centerOffset = (road.widthM / 2 + 2.5 + curbClearanceM) * scale;
+    const center = {
+      x: point.x + normal.x * centerOffset,
+      y: point.y + normal.y * centerOffset,
+    };
+    const halfFrontage = 1.25 * scale;
+    const halfDepth = 2.5 * scale;
     const polygon = [
-      { x: -wPx, y: -dPx }, { x: wPx, y: -dPx },
-      { x:  wPx, y:  dPx }, { x: -wPx, y:  dPx },
-    ].map(c => ({
-      x: center.x + c.x * cosA - c.y * sinA,
-      y: center.y + c.x * sinA + c.y * cosA
-    }));
-
-    const isPrivate = typology === "parking";
-    const pPrice = isPrivate ? 5000 : 0;
-    const pPriceLabel = isPrivate ? "S/ 5,000" : "Uso Común";
-    const pStatus = isPrivate ? "available" : "blocked";
+      { x: center.x - tangent.x * halfFrontage - normal.x * halfDepth, y: center.y - tangent.y * halfFrontage - normal.y * halfDepth },
+      { x: center.x + tangent.x * halfFrontage - normal.x * halfDepth, y: center.y + tangent.y * halfFrontage - normal.y * halfDepth },
+      { x: center.x + tangent.x * halfFrontage + normal.x * halfDepth, y: center.y + tangent.y * halfFrontage + normal.y * halfDepth },
+      { x: center.x - tangent.x * halfFrontage + normal.x * halfDepth, y: center.y - tangent.y * halfFrontage + normal.y * halfDepth },
+    ];
+    const canonicalId = `P${String(idNum).padStart(3, "0")}`;
+    const isRearEast = run.roadId === "CROSS_ROAD_BACK" && stationM >= 131.5;
+    const quadrant = isRearEast ? "PARKING_NE" : run.quadrant;
+    const legacyPrefix = isRearEast ? "NE-" : run.legacyPrefix;
 
     return {
-      id: `P-${prefix}${idNum}`,
-      number: `P${idNum}`,
+      id: canonicalId,
+      legacyId: `P-${legacyPrefix}${idNum}`,
+      number: canonicalId,
       blockId: "PARKING",
-      typology,
+      typology: "parking",
       areaM2: 12.5,
-      status: pStatus,
-      priceLabel: pPriceLabel,
-      price: pPrice,
+      status: "available",
+      priceLabel: `S/ ${PRIVATE_PARKING_PRICE_PEN.toLocaleString("es-PE")}`,
+      price: PRIVATE_PARKING_PRICE_PEN,
       polygon,
-      dimensions: "2.5m x 5.0m",
+      dimensions: "2.50m × 5.00m",
       quadrant,
       area: 12.5,
       elevation: 108,
       distanceToPool: 50,
       hubDistance: 0,
       frontage: 2.5,
-      depth: 5.0,
-      price_soles: pPrice,
-      parking_type: parking_type as any,
+      depth: 5,
+      price_soles: PRIVATE_PARKING_PRICE_PEN,
+      commercialPriceVersion: COMMERCIAL_PRICE_VERSION,
+      parking_type: run.parkingType,
       walk_distance_parking_meters: 0,
-      walk_distance_oasis_meters: 50
+      walk_distance_oasis_meters: 50,
+      placementSource: "technical-inventory",
     };
   }
 
-  // ── Generate stalls arm-by-arm with collision mask ────────────────────────
-  const generatedAllParkingPolys: XY[][] = [];
-  for (const hub of hubs) {
-    let count = 0;
-    const TARGET_PER_HUB = 65;
+  const generatedPolygons: XY[][] = [];
+  let parkingCount = 1;
+  for (const run of runs) {
+    const road = roads.find((candidate) => candidate.id === run.roadId);
+    if (!road) throw new Error(`Parking layout requires road ${run.roadId}`);
 
-    // Arm 1 — long arm
-    const arm1 = hub.arm1;
-    const a1_cols = Math.floor((arm1.dEnd - arm1.dStart) / 2.8); // ~2.8m spacing = 2.5m stall + 0.3m gap
-    for (let row = 0; row < arm1.rows && count < TARGET_PER_HUB; row++) {
-      const t_row = arm1.tStart + row * (arm1.tEnd - arm1.tStart) / Math.max(arm1.rows - 1, 1);
-      for (let col = 0; col < a1_cols && count < TARGET_PER_HUB; col++) {
-        const d_col = arm1.dStart + col * (arm1.dEnd - arm1.dStart) / Math.max(a1_cols - 1, 1);
-        const p = createParkingLot(hub.prefix, t_row, d_col, parkingCount, hub.quadrant, hub.parking_type, hub.typology);
-        
-        // ── Inside innerBuffer boundary check ──────────────────────────────
-        const inside = p.polygon.every(pt => isPointInPolygon(pt, innerBuffer));
-        if (!inside) continue;
-
-        // ── Connectivity check: must not be isolated ────────────────────────
-        if (!isAdjacentToRoad(p.polygon, roadPolys, scale)) continue;
-
-        // ── Collision mask: external obstacles + already placed hub stalls ──
-        const allObstacles = obstacles.length > 0 ? [...obstacles, ...generatedAllParkingPolys] : generatedAllParkingPolys;
-        if (allObstacles.length === 0 || !checkCollision(p.polygon, allObstacles, 0.05)) {
-          assertInsidePerimeter(p.polygon, p.id); // Regla A / Phase A
-          generatedAllParkingPolys.push(p.polygon);
-          lots.push(p);
-          parkingCount++; // Increment only on success!
-          count++;
-        }
+    // Build a dense set of valid curb stations first. Protected entry buildings,
+    // intersections and turning heads automatically create interruption gaps.
+    const availableStations: number[] = [];
+    const sampleStepM = 0.25;
+    const minimumPitchM = 2.85;
+    let lastAcceptedStation = Number.NEGATIVE_INFINITY;
+    for (let stationM = run.startM; stationM <= run.endM + 0.001; stationM += sampleStepM) {
+      if (stationM - lastAcceptedStation < minimumPitchM) continue;
+      const candidate = createParkingLot(run, road, stationM, parkingCount);
+      const isInside = candidate.polygon.every((point) => isPointInPolygon(point, innerBuffer));
+      const collides = collidesWithProtectedGeometry(candidate.polygon);
+      if (isInside && !collides) {
+        availableStations.push(stationM);
+        lastAcceptedStation = stationM;
       }
     }
 
-    // Arm 2 — short fold arm (L-shape articulation)
-    const arm2 = hub.arm2;
-    if (arm2) {
-      const a2_cols = Math.floor((arm2.dEnd - arm2.dStart) / 2.8);
-      for (let row = 0; row < arm2.rows && count < TARGET_PER_HUB; row++) {
-        const t_row = arm2.tStart + row * (arm2.tEnd - arm2.tStart) / Math.max(arm2.rows - 1, 1);
-        for (let col = 0; col < a2_cols && count < TARGET_PER_HUB; col++) {
-          const d_col = arm2.dStart + col * (arm2.dEnd - arm2.dStart) / Math.max(a2_cols - 1, 1);
-          const p = createParkingLot(hub.prefix, t_row, d_col, parkingCount, hub.quadrant, hub.parking_type, hub.typology);
-          
-          // ── Inside innerBuffer boundary check ──────────────────────────────
-          const inside = p.polygon.every(pt => isPointInPolygon(pt, innerBuffer));
-          if (!inside) continue;
-  
-          // ── Connectivity check: must not be isolated ────────────────────────
-          if (!isAdjacentToRoad(p.polygon, roadPolys, scale)) continue;
-  
-          // ── Collision mask: external obstacles + already placed hub stalls ──
-          const allObstacles2 = obstacles.length > 0 ? [...obstacles, ...generatedAllParkingPolys] : generatedAllParkingPolys;
-          if (allObstacles2.length === 0 || !checkCollision(p.polygon, allObstacles2, 0.05)) {
-            assertInsidePerimeter(p.polygon, p.id); // Regla A / Phase A
-            generatedAllParkingPolys.push(p.polygon);
-            lots.push(p);
-            parkingCount++; // Increment only on success!
-            count++;
-          }
-        }
-      }
+    if (availableStations.length < run.count) {
+      throw new Error(`${run.roadId} side ${run.side} supports ${availableStations.length} stalls; ${run.count} required`);
     }
+
+    const selectedStations = Array.from({ length: run.count }, (_, index) => {
+      const sourceIndex = run.count === 1
+        ? 0
+        : Math.round(index * (availableStations.length - 1) / (run.count - 1));
+      return availableStations[sourceIndex];
+    });
+
+    for (const stationM of selectedStations) {
+      const parking = createParkingLot(run, road, stationM, parkingCount);
+      const isInside = parking.polygon.every((point) => isPointInPolygon(point, innerBuffer));
+      const collidesWithProtected = collidesWithProtectedGeometry(parking.polygon);
+      const collidesWithParking = generatedPolygons.some((polygon) => polygonsOverlap(parking.polygon, polygon));
+      if (!isInside || collidesWithProtected || collidesWithParking) {
+        const reason = !isInside
+          ? "outside the legal buffer"
+          : collidesWithParking
+            ? "collides with another parking stall"
+            : "collides with protected geometry";
+        throw new Error(`${parking.id} ${reason} on ${run.roadId} at ${stationM.toFixed(2)}m`);
+      }
+      assertInsidePerimeter(parking.polygon, parking.id);
+      generatedPolygons.push(parking.polygon);
+      lots.push(parking);
+      parkingCount += 1;
+    }
+  }
+
+  if (lots.length !== 138) {
+    throw new Error(`Technical inventory requires 138 parking stalls; generated ${lots.length}`);
   }
 
   return lots;

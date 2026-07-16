@@ -1,10 +1,4 @@
-import { buildTerrainScene, getMeterToSvgScale } from "./src/lib/terrainModel";
-import { buildBlocks } from "./src/lib/blockModel";
-import { buildLots, buildParkingLots } from "./src/lib/lotModel";
-import { buildAmenities } from "./src/lib/amenityModel";
-import { buildRoads } from "./src/lib/roadModel";
-import { roadToPolygon } from "./src/lib/geometry";
-import { checkCollision } from "./src/lib/spatialAnalyzer";
+import { buildMoonParacasInventory } from "./src/lib/masterplanInventory";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -13,53 +7,7 @@ function run() {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
 
-  const terrainScene = buildTerrainScene();
-  const scale = getMeterToSvgScale();
-  const blocks = buildBlocks(terrainScene.innerBuffer);
-  const roads = buildRoads(terrainScene.innerBuffer);
-  const amenities = buildAmenities(terrainScene.innerBuffer);
-  
-  const roadPolys = roads.map(r => roadToPolygon(r.path, r.widthM, scale));
-  
-  const obstacles = [
-    ...blocks.map((b: any) => b.polygon),
-    ...amenities.map((a: any) => a.polygon),
-    ...roadPolys
-  ];
-  
-  const parkings = buildParkingLots(terrainScene.innerBuffer, obstacles, roadPolys);
-  
-  function circleToPolygon(center: any, radiusM: number, scale: number): any[] {
-    const poly: any[] = [];
-    const points = 12;
-    const r = radiusM * scale;
-    for (let i = 0; i < points; i++) {
-      const angle = (i * 2 * Math.PI) / points;
-      poly.push({
-        x: center.x + r * Math.cos(angle),
-        y: center.y + r * Math.sin(angle)
-      });
-    }
-    return poly;
-  }
-
-  const culDeSacs: any[][] = [];
-  roads.forEach(r => {
-    if (r.id.startsWith("LINEAR_ROAD")) {
-      culDeSacs.push(circleToPolygon(r.path[0], 6.0, scale));
-    }
-  });
-
-  const activeBuildings = [
-    ...amenities
-      .filter((a: any) => a.id !== "A_SAND" && a.kind !== "sand-plaza")
-      .map((a: any) => a.polygon),
-    ...culDeSacs,
-    ...parkings.map((p: any) => p.polygon),
-    ...roadPolys
-  ];
-  
-  const cleanLocalLots = buildLots(blocks, parkings, roadPolys, activeBuildings);
+  const { residentialLots: cleanLocalLots, parkings } = buildMoonParacasInventory();
   
   // Format data for generate_excel.py
   const excelLots: any[] = [];

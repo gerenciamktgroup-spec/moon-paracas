@@ -1,40 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { Lot } from "../types/map";
+import { PROJECT } from "../config/project";
 import MoonParacasMap from "../components/map/MoonParacasMap";
 import { LotDetailsModal } from "../components/LotDetailsModal";
-
-// Interactive count-up animation component
-const AnimatedNumber: React.FC<{ value: number }> = ({ value }) => {
-  const [displayValue, setDisplayValue] = useState(0);
-
-  useEffect(() => {
-    let start = 0;
-    const end = value;
-    if (start === end) {
-      setDisplayValue(end);
-      return;
-    }
-    const duration = 1200; // 1.2s duration
-    const steps = 60;
-    const increment = end / steps;
-    let stepCount = 0;
-
-    const timer = setInterval(() => {
-      stepCount++;
-      start += increment;
-      if (stepCount >= steps) {
-        setDisplayValue(end);
-        clearInterval(timer);
-      } else {
-        setDisplayValue(Math.floor(start));
-      }
-    }, duration / steps);
-
-    return () => clearInterval(timer);
-  }, [value]);
-
-  return <>{displayValue}</>;
-};
+import { LotShortlist } from "../components/LotShortlist";
+import { InteriorHero } from "../components/InteriorHero";
+import { useLotShortlist } from "../hooks/useLotShortlist";
+import { trackEvent } from "../lib/analytics";
+import { COMMERCIAL_PRICE_PERIOD_LABEL, PRIVATE_PARKING_PRICE_PEN } from "../config/pricing";
 
 interface SimulatorProps {
   lots: Lot[];
@@ -52,17 +25,28 @@ interface SimulatorProps {
 }
 
 export const Simulator: React.FC<SimulatorProps> = ({ lots, selectedLot, setSelectedLot, handleReserveLot }) => {
+  const shortlist = useLotShortlist();
+  const previousSelectionId = useRef<string | null>(null);
   // Helper metrics for overall dashboard counters
-  const residentialLots = lots.filter(l => l.blockId !== "PARKING");
-  const parkingLots = lots.filter(l => l.blockId === "PARKING");
+  const residentialLots = lots.filter((lot) => lot.typology !== "parking" && lot.typology !== "parking-external");
   
-  const libresCount = residentialLots.filter(l => l.status === "available" || l.status === "offer").length;
-  const reservadosCount = residentialLots.filter(l => l.status === "reserved").length;
-  const vendidosCount = residentialLots.filter(l => l.status === "sold").length;
-  const cocherasCount = parkingLots.length;
+  const officialResidentialCount = PROJECT.residentialLots;
+  const unavailableCount = Math.min(residentialLots.filter((lot) => lot.status !== "available").length, officialResidentialCount);
+  const availableCount = officialResidentialCount - unavailableCount;
 
   // Auto-scroll to simulator details on mobile/tablet viewports (< 1280px)
   useEffect(() => {
+    if (!selectedLot) return;
+    if (previousSelectionId.current === null) {
+      previousSelectionId.current = selectedLot.id;
+      return;
+    }
+    if (previousSelectionId.current === selectedLot.id) return;
+    previousSelectionId.current = selectedLot.id;
+
+    if (selectedLot && selectedLot.typology !== "parking" && selectedLot.typology !== "parking-external") {
+      trackEvent("view_lot", { lotId: selectedLot.id, typology: selectedLot.typology, status: selectedLot.status });
+    }
     if (selectedLot && window.innerWidth < 1280) {
       const element = document.getElementById("financiamiento");
       if (element) {
@@ -76,63 +60,81 @@ export const Simulator: React.FC<SimulatorProps> = ({ lots, selectedLot, setSele
   }, [selectedLot]);
 
   return (
-    <div className="relative min-h-[90vh] text-[#E1D9C1] py-12 px-4 sm:px-6 md:px-8 space-y-12 overflow-hidden">
-      
-      <div className="text-center space-y-4 max-w-3xl mx-auto">
-        <span className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#E2725B]">Simulación Financiera</span>
-        <h2 className="font-display text-4xl sm:text-5xl font-bold uppercase text-white tracking-wide">
-          El Masterplan Moon Paracas
-        </h2>
-        <p className="text-stone-300 font-sans text-xs sm:text-sm font-light leading-relaxed">
-          Selecciona un lote residencial en el plano interactivo para simular el cronograma de pagos, la cuota inicial (30%) y el financiamiento directo sin intereses en tiempo real.
-        </p>
-      </div>
+    <div className="relative min-h-[90vh] overflow-hidden bg-[#111715] text-[#E1D9C1]">
+      <InteriorHero
+        eyebrow="Masterplan interactivo"
+        title={<>Encuentra tu lugar<br /><em className="font-normal text-[#d5aa83]">dentro del paisaje.</em></>}
+        description="Recorre seis aldeas peatonales alrededor del Oasis. Elige por cercanía, paisaje o privacidad; cada lote tiene cochera perimetral y espacio comprobado para implantar un domo de Ø4 m u Ø8 m."
+        index="Inventario residencial"
+        aside={
+          <div className="mt-4 grid grid-cols-2 gap-x-7 gap-y-5">
+            <div><strong className="font-display text-3xl font-medium text-white">{officialResidentialCount}</strong><span className="mt-1 block text-[9px] font-bold uppercase tracking-[0.16em] text-white/42">Lotes</span></div>
+            <div><strong className="font-display text-3xl font-medium text-[#f0b08c]">{availableCount}</strong><span className="mt-1 block text-[9px] font-bold uppercase tracking-[0.16em] text-white/42">Disponibles</span></div>
+            <div><strong className="font-display text-3xl font-medium text-white/65">{unavailableCount}</strong><span className="mt-1 block text-[9px] font-bold uppercase tracking-[0.16em] text-white/42">No disponibles</span></div>
+            <div><strong className="font-display text-3xl font-medium text-[#d5aa83]">6</strong><span className="mt-1 block text-[9px] font-bold uppercase tracking-[0.16em] text-white/42">Aldeas</span></div>
+          </div>
+        }
+      />
 
-      {/* Quick numbers tracker bar (Quiet Luxury Glassmorphic style) */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 pb-4 text-center max-w-[1400px] mx-auto">
-        <div className="glass-card p-3 sm:p-5 border-t-2 border-t-[#E1D9C1] shadow-md flex flex-col gap-1">
-          <p className="text-[8px] sm:text-[9px] font-bold text-[#E1D9C1]/80 uppercase tracking-widest">Disponibilidad</p>
-          <p className="font-sans font-extrabold text-white text-2xl sm:text-3xl">
-            <AnimatedNumber value={libresCount} />
-          </p>
+      <div className="mx-auto max-w-[1400px] space-y-16 px-5 py-14 sm:px-8 sm:py-20 lg:px-12">
+        <div className="grid gap-5 border-y border-white/10 py-5 text-[9px] font-bold uppercase tracking-[0.18em] text-white/42 sm:grid-cols-3">
+          <p><span className="mr-3 text-[#bb5638]">01</span>Elige tu ubicación</p>
+          <p><span className="mr-3 text-[#bb5638]">02</span>Guarda tus favoritos</p>
+          <p><span className="mr-3 text-[#bb5638]">03</span>Calcula tu cuota</p>
         </div>
-        <div className="glass-card p-3 sm:p-5 border-t-2 border-t-[#E2725B] shadow-md flex flex-col gap-1">
-          <p className="text-[8px] sm:text-[9px] font-bold text-[#E2725B]/85 uppercase tracking-widest">Separados (Pre-venta)</p>
-          <p className="font-sans font-extrabold text-[#E2725B] text-2xl sm:text-3xl">
-            <AnimatedNumber value={reservadosCount} />
-          </p>
-        </div>
-        <div className="glass-card p-3 sm:p-5 border-t-2 border-t-stone-500 shadow-md flex flex-col gap-1">
-          <p className="text-[8px] sm:text-[9px] font-bold text-stone-400 uppercase tracking-widest">Villas Vendidas</p>
-          <p className="font-sans font-extrabold text-stone-400 text-2xl sm:text-3xl">
-            <AnimatedNumber value={vendidosCount} />
-          </p>
-        </div>
-        <div className="glass-card p-3 sm:p-5 border-t-2 border-t-[#C5B496] shadow-md flex flex-col gap-1">
-          <p className="text-[8px] sm:text-[9px] font-bold text-[#C5B496] uppercase tracking-widest">Cocheras Disponibles</p>
-          <p className="font-sans font-extrabold text-[#C5B496] text-2xl sm:text-3xl">
-            <AnimatedNumber value={cocherasCount} />
-          </p>
-        </div>
-      </div>
 
-      <div className="w-full max-w-[1200px] mx-auto space-y-8">
-        {/* Map Container */}
-        <div className="w-full glass-card p-1.5 sm:p-3 shadow-2xl border border-white/10 rounded-2xl overflow-hidden">
-          <MoonParacasMap
-            lots={lots}
-            selectedLot={selectedLot}
-            onSelectLot={setSelectedLot}
-          />
+        <div className="grid overflow-hidden rounded-md border border-white/10 bg-[#162220] sm:grid-cols-[1fr_1fr_1.2fr]">
+          <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
+            <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/45">Lotes desde</p>
+            <p className="mt-2 font-display text-2xl font-semibold text-[#f0b08c]">Desde S/ 37,500</p>
+          </div>
+          <div className="border-b border-white/10 p-5 sm:border-b-0 sm:border-r">
+            <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/45">Cochera privada</p>
+            <p className="mt-2 font-display text-2xl font-semibold text-white">S/ {PRIVATE_PARKING_PRICE_PEN.toLocaleString("es-PE")}</p>
+          </div>
+          <div className="flex items-center justify-between gap-5 p-5">
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/45">Lista comercial · {COMMERCIAL_PRICE_PERIOD_LABEL}</p>
+              <p className="mt-2 text-xs leading-5 text-white/60">Valores referenciales a julio de 2026. Confirmamos disponibilidad antes de separar.</p>
+            </div>
+            <a href="/documents/Moon_Paracas_Brochure_Comercial_V2.2_2026.pdf" target="_blank" rel="noreferrer" className="shrink-0 rounded-md border border-[#f0b08c]/40 px-4 py-3 text-[9px] font-bold uppercase tracking-[0.12em] text-[#f0b08c] transition hover:bg-[#f0b08c] hover:text-[#18353b]">Descargar brochure</a>
+          </div>
         </div>
-        
-        {/* Simulator / Details Container */}
-        <div id="financiamiento" className="w-full">
+
+        <LotShortlist
+          lots={lots}
+          favoriteIds={shortlist.favoriteIds}
+          maxItems={shortlist.maxItems}
+          onSelect={setSelectedLot}
+          onRemove={shortlist.toggleFavorite}
+          onShare={shortlist.share}
+        />
+
+        <section className="mx-auto w-full max-w-[1200px]" aria-labelledby="map-title">
+          <div className="mb-6 flex flex-col justify-between gap-3 border-b border-white/10 pb-5 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#d5aa83]">Paso 01 · Ubicación</p>
+              <h2 id="map-title" className="mt-2 font-display text-3xl font-medium text-white sm:text-4xl">Elige dónde quieres estar</h2>
+            </div>
+            <p className="max-w-sm text-xs leading-6 text-white/48">Toca un lote para conocer su área, precio total, cochera asignada y el espacio disponible para tu domo.</p>
+          </div>
+          <div className="w-full overflow-hidden rounded-md border border-white/12 bg-[#16201e] p-1.5 shadow-[0_30px_80px_rgba(0,0,0,0.28)] sm:p-3">
+            <MoonParacasMap lots={lots} selectedLot={selectedLot} onSelectLot={setSelectedLot} />
+          </div>
+        </section>
+
+        <section id="financiamiento" className="mx-auto w-full max-w-[1200px] scroll-mt-24" aria-labelledby="finance-title">
+          <div className="mb-6 border-b border-white/10 pb-5">
+            <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#d5aa83]">Paso 02 · Tu inversión</p>
+            <h2 id="finance-title" className="mt-2 font-display text-3xl font-medium text-white sm:text-4xl">Comprueba el total antes de separar</h2>
+          </div>
           <LotDetailsModal
             lot={selectedLot}
             onReserve={handleReserveLot}
+            isFavorite={selectedLot ? shortlist.favoriteIds.includes(selectedLot.id) : false}
+            onToggleFavorite={shortlist.toggleFavorite}
           />
-        </div>
+        </section>
       </div>
     </div>
   );

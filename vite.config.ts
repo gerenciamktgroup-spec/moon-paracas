@@ -16,6 +16,21 @@ export default defineConfig(() => {
         process.env.VITE_GOOGLE_MAPS_PLATFORM_KEY || process.env.GOOGLE_MAPS_PLATFORM_KEY || ''
       )
     },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (!id.includes('node_modules')) return undefined;
+            if (id.includes('@firebase') || id.includes('/firebase/')) return 'firebase-vendor';
+            if (id.includes('framer-motion') || id.includes('/motion/')) return 'motion-vendor';
+            if (id.includes('react-router')) return 'router-vendor';
+            if (id.includes('/react/') || id.includes('/react-dom/')) return 'react-vendor';
+            if (id.includes('@turf') || id.includes('/three/')) return 'visual-vendor';
+            return undefined;
+          },
+        },
+      },
+    },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.

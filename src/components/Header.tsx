@@ -1,157 +1,158 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { Menu, MessageCircle, X } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { TreePine, Receipt, Map, Home, Image, Tent, ChevronDown } from "lucide-react";
+import { CONTACT, whatsappHref } from "../config/project";
 
 export const MoonLogo: React.FC<{ className?: string; size?: number; dark?: boolean }> = ({
   className = "",
-  size = 48,
-  dark = false,
-}) => {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 100 100"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={`${className} transition-all duration-300`}
-    >
-      <circle cx="50" cy="50" r="44" stroke={dark ? "#F4F4F1" : "#C4A484"} strokeWidth="3" />
-      <path d="M 12,65 Q 32,44 54,62 T 88,58" stroke={dark ? "#C4A484" : "#2D3339"} strokeWidth="2.5" strokeLinecap="square" fill="none" />
-      <path d="M 18,74 Q 45,58 68,70 T 84,68" stroke={dark ? "#F4F4F1" : "#C4A484"} strokeWidth="2" strokeLinecap="square" fill="none" />
-      <path d="M 68,26 A 14,14 0 0 0 54,42" stroke={dark ? "#C4A484" : "#F4F4F1"} strokeWidth="2" />
-    </svg>
-  );
-};
+  size = 42,
+  dark = true,
+}) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 100 100"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    aria-hidden="true"
+  >
+    <circle cx="50" cy="50" r="44" stroke={dark ? "#F4F0E6" : "#18353B"} strokeWidth="3" />
+    <path d="M 12,65 Q 32,44 54,62 T 88,58" stroke="#C96C4C" strokeWidth="2.5" strokeLinecap="round" />
+    <path d="M 18,74 Q 45,58 68,70 T 84,68" stroke={dark ? "#F4F0E6" : "#18353B"} strokeWidth="2" strokeLinecap="round" />
+    <path d="M 68,26 A 14,14 0 0 0 54,42" stroke="#D7B07A" strokeWidth="2" />
+  </svg>
+);
 
-export const Header: React.FC = () => {
+const navigation = [
+  { label: "Masterplan", to: "/simulador" },
+  { label: "Experiencia", to: "/experiencia" },
+  { label: "Galería", to: "/galeria" },
+  { label: "Ficha técnica", to: "/tecnica" },
+  { label: "Documentos", to: "/documentos" },
+];
+
+export function Header() {
   const location = useLocation();
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => setMobileOpen(false), [location.pathname, location.hash]);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false);
-      }
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileOpen(false);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
   }, []);
 
-  const navItems = [
-    { id: "/", icon: <Home className="w-3.5 h-3.5" />, label: "El Proyecto" },
-    { id: "/simulador", icon: <Map className="w-3.5 h-3.5" />, label: "El Masterplan" },
-    { id: "/paracas-dome", icon: <Tent className="w-3.5 h-3.5" />, label: "Paracas Dome" },
-    { id: "/galeria", icon: <Image className="w-3.5 h-3.5" />, label: "Galería" },
-  ];
-
-  const secondaryItems = [
-    { id: "/experiencia", icon: <TreePine className="w-4 h-4" />, label: "Trayectoria" },
-    { id: "/tecnica", icon: <Receipt className="w-4 h-4" />, label: "Memoria Técnica" }
-  ];
-
-  const isSecondaryActive = secondaryItems.some(item => 
-    location.pathname === item.id || location.pathname.startsWith(`${item.id}/`)
-  );
-
   return (
-    <header className="sticky top-0 z-40 flex flex-col w-full shadow-lg">
-      {/* Sticky Microcopy Bar (Quiet Luxury) - Hidden on mobile to save space */}
-      <div className="w-full bg-[#100C0A] border-b border-[#3A2E26] text-center py-1.5 px-4 hidden sm:block">
-        <p className="font-sans text-[9px] sm:text-xs font-bold uppercase tracking-[0.2em] text-[#E1D9C1]/85">
-          Arquitectura, paisaje y estructura: el privilegio de la baja densidad.
-        </p>
-      </div>
-      
-      {/* Main Header (Glassmorphic) */}
-      <div className="border-b border-[#E1D9C1]/15 bg-[#1D1714]/90 backdrop-blur-md text-white px-4 py-2.5 sm:px-6 sm:py-4">
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 flex-col lg:flex-row">
-          {/* Brand Sign */}
-          <Link to="/" className="flex items-center gap-3 sm:gap-4 group shrink-0">
-            <div className="w-10 h-10 sm:w-[52px] sm:h-[52px] bg-[#E2725B] flex items-center justify-center font-display font-black text-xl sm:text-2xl text-white group-hover:scale-105 transition-transform shadow-[0_0_15px_rgba(226,114,91,0.3)]">
-              M
-            </div>
-            <div className="flex flex-col justify-center text-left">
-              <h1 className="font-display text-xl sm:text-2xl font-bold tracking-widest text-[#E1D9C1] uppercase leading-none mb-1 sm:mb-1.5">
-                MOON <span className="font-light text-[#E2725B]">PARACAS</span>
-              </h1>
-              <p className="text-[8px] sm:text-[10px] uppercase font-bold tracking-[0.25em] text-[#E1D9C1]/75 leading-none">
-                Refugio Residencial Exclusivo
-              </p>
-            </div>
-          </Link>
+    <header className="moon-nav-surface sticky top-0 z-50 h-[72px] border-b border-white/10 bg-[#0c1819] text-white shadow-[0_12px_40px_rgba(2,12,13,0.16)]">
+      <div className="mx-auto flex h-full max-w-[1400px] items-center justify-between gap-6 px-5 sm:px-8 lg:px-12">
+        <Link to="/" className="group flex shrink-0 items-center gap-3" aria-label="Moon Paracas, inicio">
+          <MoonLogo size={38} className="transition-transform duration-500 group-hover:rotate-[8deg]" />
+          <span className="leading-none">
+            <span className="block font-display text-lg font-semibold tracking-[0.1em] text-[#f5f1e8] sm:text-xl">MOON PARACAS</span>
+            <span className="mt-1 block text-[8px] font-bold uppercase tracking-[0.24em] text-[#d5aa83]">Refugio orgánico</span>
+          </span>
+        </Link>
 
-          {/* Centered Horizontal Nav Pills */}
-          <div className="flex overflow-visible w-full lg:w-auto items-center justify-center gap-1.5 pb-2 lg:pb-0 pt-2 lg:pt-0 border-t border-[#E1D9C1]/10 lg:border-none mt-2 lg:mt-0 px-2 lg:px-0">
-            {navItems.map((item) => {
-              const isActive = location.pathname === item.id || (item.id !== "/" && location.pathname.startsWith(`${item.id}/`));
+        <nav className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/[0.035] p-1 xl:flex" aria-label="Navegación principal">
+          {navigation.map((item) => {
+            const active = location.pathname.startsWith(item.to);
+            return (
+              <Link
+                key={item.label}
+                to={item.to}
+                aria-current={active ? "page" : undefined}
+                className={`rounded-full px-3 py-2.5 text-[9px] font-bold uppercase tracking-[0.13em] transition-all ${
+                  active ? "bg-white/10 text-white shadow-sm" : "text-white/55 hover:bg-white/[0.055] hover:text-white"
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+          <Link
+            to="/paracas-dome"
+            aria-current={location.pathname.startsWith("/paracas-dome") ? "page" : undefined}
+            className={`rounded-full px-3 py-2.5 text-[9px] font-bold uppercase tracking-[0.13em] transition-colors ${
+              location.pathname.startsWith("/paracas-dome") ? "bg-[#f0b08c]/12 text-[#f0b08c]" : "text-white/60 hover:bg-white/[0.055] hover:text-white"
+            }`}
+          >
+            Paracas Dome
+          </Link>
+        </nav>
+
+        <div className="hidden items-center gap-3 xl:flex">
+          <Link
+            to="/simulador"
+            className="text-[10px] font-bold uppercase tracking-[0.14em] text-white/65 hover:text-white"
+          >
+            Disponibilidad
+          </Link>
+          <a
+            href={whatsappHref("Hola, quiero reservar un lote en Moon Paracas.")}
+            target={CONTACT.whatsapp ? "_blank" : undefined}
+            rel={CONTACT.whatsapp ? "noreferrer" : undefined}
+            className="inline-flex min-h-11 items-center gap-2 rounded-full bg-[#bb5638] px-5 text-[9px] font-bold uppercase tracking-[0.14em] text-white shadow-[0_10px_25px_rgba(187,86,56,0.2)] transition-all hover:-translate-y-0.5 hover:bg-[#a64932] focus:outline-none focus:ring-2 focus:ring-[#f0b08c]"
+          >
+            <MessageCircle className="h-4 w-4" aria-hidden="true" />
+            Reservar lote
+          </a>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setMobileOpen((open) => !open)}
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/15 bg-white/[0.035] text-white transition-colors hover:bg-white/10 xl:hidden"
+          aria-expanded={mobileOpen}
+          aria-controls="mobile-navigation"
+          aria-label={mobileOpen ? "Cerrar navegación" : "Abrir navegación"}
+        >
+          {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+      </div>
+
+      {mobileOpen && (
+        <nav
+          id="mobile-navigation"
+          className="moon-nav-surface absolute inset-x-0 top-[72px] max-h-[calc(100dvh-72px)] overflow-y-auto border-b border-white/10 bg-[#101a1b] px-5 py-6 shadow-2xl xl:hidden"
+          aria-label="Navegación móvil"
+        >
+          <div className="mx-auto flex max-w-[1400px] flex-col">
+            {navigation.map((item) => {
+              const active = location.pathname.startsWith(item.to);
               return (
                 <Link
-                  key={item.id}
-                  to={item.id}
-                  className={`flex items-center shrink-0 gap-1.5 px-3 py-2 sm:px-4 sm:py-2 rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all duration-300 border ${
-                    isActive 
-                      ? "border-[#E2725B] text-white bg-[#E2725B]/25 shadow-[0_0_15px_rgba(226,114,91,0.25)]" 
-                      : "border-[#E1D9C1]/10 text-[#E1D9C1]/75 hover:border-[#E2725B]/60 hover:text-white bg-[#E1D9C1]/5"
-                  }`}
+                  key={item.label}
+                  to={item.to}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex items-center justify-between border-b border-white/10 py-4 font-display text-2xl font-semibold ${active ? "text-[#f0b08c]" : "text-white"}`}
                 >
-                  {item.icon}
                   {item.label}
+                  {active && <span className="h-1.5 w-1.5 rounded-full bg-[#bb5638]" aria-hidden="true" />}
                 </Link>
               );
             })}
-
-            {/* Dropdown Menu "Más" */}
-            <div className="relative shrink-0" ref={dropdownRef}>
-              <button
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-                className={`flex items-center gap-1 px-3 py-2 sm:px-4 sm:py-2 rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-wider transition-all duration-300 border cursor-pointer ${
-                  isSecondaryActive
-                    ? "border-[#E2725B] text-white bg-[#E2725B]/25 shadow-[0_0_15px_rgba(226,114,91,0.25)]"
-                    : "border-[#E1D9C1]/10 text-[#E1D9C1]/75 hover:border-[#E2725B]/60 hover:text-white bg-[#E1D9C1]/5"
-                }`}
-              >
-                <span>Más</span>
-                <ChevronDown className={`w-3 h-3 transition-transform duration-300 ${dropdownOpen ? "rotate-180" : ""}`} />
-              </button>
-
-              {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-48 rounded-2xl border border-[#E1D9C1]/15 bg-[#1D1714]/95 backdrop-blur-xl shadow-2xl p-1.5 flex flex-col gap-1 z-50">
-                  {secondaryItems.map((item) => {
-                    const isActive = location.pathname === item.id;
-                    return (
-                      <Link
-                        key={item.id}
-                        to={item.id}
-                        onClick={() => setDropdownOpen(false)}
-                        className={`flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${
-                          isActive
-                            ? "bg-[#E2725B] text-white"
-                            : "text-[#E1D9C1]/80 hover:bg-[#E1D9C1]/5 hover:text-white"
-                        }`}
-                      >
-                        {item.icon}
-                        {item.label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right Column: Conversión CTA Button (Desktop-only) */}
-          <div className="hidden lg:block shrink-0">
             <Link
-              to="/simulador"
-              className="bg-[#E2725B] hover:bg-[#d85e45] text-white px-5 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-all duration-300 shadow-[0_0_15px_rgba(226,114,91,0.2)] border border-[#E2725B]/40 active:translate-y-0.5"
+              to="/paracas-dome"
+              aria-current={location.pathname.startsWith("/paracas-dome") ? "page" : undefined}
+              className={`border-b border-white/10 py-4 font-display text-2xl font-semibold ${location.pathname.startsWith("/paracas-dome") ? "text-[#f0b08c]" : "text-white"}`}
             >
-              Simulador de Lotes
+              Paracas Dome
             </Link>
+            <a
+              href={whatsappHref("Hola, quiero reservar un lote en Moon Paracas.")}
+              target={CONTACT.whatsapp ? "_blank" : undefined}
+              rel={CONTACT.whatsapp ? "noreferrer" : undefined}
+              className="mt-5 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-[#bb5638] px-6 text-xs font-bold uppercase tracking-[0.14em] text-white"
+            >
+              <MessageCircle className="h-4 w-4" /> Reservar lote
+            </a>
           </div>
-        </div>
-      </div>
+        </nav>
+      )}
     </header>
   );
-};
+}

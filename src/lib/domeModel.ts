@@ -8,7 +8,7 @@ export type DomeScene = {
   lots: Lot[];
 };
 
-// Generates the layout for Paracas Dome (50 lots, Founder/Comfort offers, 50% downpayment, max 12 installments with 5% interest)
+// Generates the layout for Paracas Dome (50 lots and Founder/Comfort offers).
 export function buildDomeScene(): DomeScene {
   const lots: Lot[] = [];
   const amenities: Amenity[] = [];
