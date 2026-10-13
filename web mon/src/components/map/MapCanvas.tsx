@@ -1,4 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { APIProvider, Map as GoogleMap, useMap } from "@vis.gl/react-google-maps";
 import {
   Maximize2,
@@ -659,7 +660,7 @@ function GoogleMapsVectorLayer({
         this.div.style.width = `${SVG_W}px`;
         this.div.style.height = `${SVG_H}px`;
         this.div.style.transformOrigin = "0 0";
-        this.div.style.pointerEvents = "auto";
+        this.div.style.pointerEvents = "none";
 
         const panes = this.getPanes()!;
         panes.overlayMouseTarget.appendChild(this.div);
@@ -702,10 +703,10 @@ function GoogleMapsVectorLayer({
 
   if (!containerDiv) return null;
 
-  return (
+  return createPortal(
     <svg
       viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-      className="h-full w-full pointer-events-auto"
+      className="h-full w-full pointer-events-none"
       style={{ overflow: "visible" }}
     >
       <defs>
@@ -781,7 +782,7 @@ function GoogleMapsVectorLayer({
             <g
               key={`lot-${lot.id}`}
               onClick={() => onSelectLot(lot)}
-              className="cursor-pointer group"
+              className="cursor-pointer group pointer-events-auto"
               opacity={isMatch ? 1.0 : 0.15}
             >
               <path
@@ -828,7 +829,7 @@ function GoogleMapsVectorLayer({
             <g
               key={`am-${am.id}`}
               onClick={() => onSelectAmenity(am)}
-              className="cursor-pointer group"
+              className="cursor-pointer group pointer-events-auto"
               transform={`translate(${pt.x}, ${pt.y})`}
             >
               <circle r="9" fill="#161310" stroke={am.badgeColor} strokeWidth="1.8" />
@@ -839,7 +840,7 @@ function GoogleMapsVectorLayer({
       </g>
 
       {/* 5. 192 COCHERAS PLUS EN EL SUR */}
-      <g className="arrival-complex">
+      <g className="arrival-complex pointer-events-none">
         {parkingStalls.map((stall) => {
           const pathData =
             stall.polygon
@@ -865,12 +866,13 @@ function GoogleMapsVectorLayer({
         const s = toCanvasSvg(v.x, v.y);
         const labels = ["A (Sur)", "B (Oeste)", "C (Norte)", "D (Este)"];
         return (
-          <g key={`v-${i}`} transform={`translate(${s.x}, ${s.y})`}>
+          <g key={`v-${i}`} transform={`translate(${s.x}, ${s.y})`} className="pointer-events-none">
             <circle r="6" fill="#161310" stroke="#C5A059" strokeWidth="2" />
             <circle r="2.5" fill="#FFF" />
           </g>
         );
       })}
-    </svg>
+    </svg>,
+    containerDiv
   );
 }
