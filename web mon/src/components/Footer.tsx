@@ -95,10 +95,13 @@ export const Footer: React.FC<{ selectedLot?: Lot | null; onOpenDossier?: () => 
         {/* Legal & Copyright */}
         <div className="pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-[11px] text-[#786F66]">
           <p>© {new Date().getFullYear()} Moon Paracas. Todos los derechos reservados.</p>
-          <div className="flex gap-6">
+          <div className="flex flex-wrap items-center gap-6">
             <Link to="/privacidad" className="hover:text-[#161311] transition">Privacidad</Link>
             <Link to="/terminos" className="hover:text-[#161311] transition">Términos</Link>
             <Link to="/documentos" className="hover:text-[#161311] transition">Expediente Legal</Link>
+            <Link to="/intranet" className="hover:text-[#A84F36] transition font-bold flex items-center gap-1 text-[#161310]">
+              <ShieldCheck className="h-3 w-3 text-[#C5A059]" /> Intranet CRM
+            </Link>
           </div>
         </div>
 

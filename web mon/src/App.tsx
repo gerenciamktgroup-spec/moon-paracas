@@ -26,6 +26,7 @@ const NotFound = lazy(() => import("./pages/NotFound").then((module) => ({ defau
 const LegalPage = lazy(() => import("./pages/Legal").then((module) => ({ default: module.LegalPage })));
 const DocumentCenter = lazy(() => import("./pages/DocumentCenter").then((module) => ({ default: module.DocumentCenter })));
 const Cielo = lazy(() => import("./pages/Cielo").then((module) => ({ default: module.Cielo })));
+const CrmIntranet = lazy(() => import("./pages/CrmIntranet").then((module) => ({ default: module.CrmIntranet })));
 
 // Scroll to top helper
 const ScrollToTop = () => {
@@ -231,6 +232,9 @@ export default function App() {
               <Route path="/tecnica" element={<Technical />} />
               <Route path="/documentos" element={<DocumentCenter />} />
               <Route path="/cielo" element={<Cielo />} />
+              <Route path="/crm" element={<CrmIntranet />} />
+              <Route path="/intranet" element={<CrmIntranet />} />
+              <Route path="/asesores" element={<CrmIntranet />} />
               <Route path="/privacidad" element={<LegalPage type="privacy" />} />
               <Route path="/terminos" element={<LegalPage type="terms" />} />
               <Route path="*" element={<NotFound />} />
