@@ -7,6 +7,7 @@ import { buildRoads } from "./roadModel";
 import { buildTerrainScene, getMeterToSvgScale } from "./terrainModel";
 import { buildConstellationMasterplan } from "./constellationModel";
 import { buildCourtyardMasterplan } from "./courtyardMasterplanModel";
+import { buildCommercialInventory } from "./commercialInventory";
 
 function circleToPolygon(center: XY, radiusM: number, scale: number): XY[] {
   const radius = radiusM * scale;
@@ -55,5 +56,5 @@ export function buildMoonParacasInventoryV1() {
 }
 
 export function buildMoonParacasInventory() {
-  return buildCourtyardMasterplan();
+  return buildCommercialInventory();
 }

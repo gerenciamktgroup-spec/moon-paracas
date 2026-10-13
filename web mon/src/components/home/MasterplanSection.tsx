@@ -1,226 +1,260 @@
 import React, { useState } from "react";
-import { ArrowUpRight, Car, MapPinned, Leaf } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { ArrowUpRight, Compass, Check } from "lucide-react";
 import { Link } from "react-router-dom";
-import { SectionHeading } from "./SectionHeading";
-import { PROJECT } from "../../config/project";
 import {
-  COMMERCIAL_PRICE_PERIOD_LABEL,
   LOT_PRICE_PER_M2_USD,
-  PREMIUM_LOT_PRICE_PEN,
+  MACRO_LOT_PRICE_PER_M2_USD,
+  STANDARD_LOT_PRICE_USD,
   STANDARD_LOT_PRICE_PEN,
-  formatPenAmount,
+  DOUBLE_LOT_PRICE_USD,
+  DOUBLE_LOT_PRICE_PEN,
+  MACRO_LOT_PRICE_USD,
+  MACRO_LOT_PRICE_PEN,
+  STANDARD_LOT_AREA_M2,
+  DOUBLE_LOT_AREA_M2,
+  MACRO_LOT_AREA_M2,
 } from "../../config/pricing";
 import { trackEvent } from "../../lib/analytics";
+import { PROJECT } from "../../config/project";
+import { Lot } from "../../types/map";
+import { MapCanvas, type MasterplanBasemap } from "../map/MapCanvas";
 
-type LotType = {
-  id: string;
-  name: string;
-  count: number;
-  color: string;
-  description: string;
-  image: string;
-  note: string;
-  rateLabel: string;
-  ticketLabel: string;
-};
+const oasisLabel = `${Math.round(PROJECT.oasisAreaM2).toLocaleString("es-PE")} m²`;
 
-export const lotTypes: LotType[] = [
-  {
-    id: "tiny",
-    name: "Patio Lunar",
-    count: 228,
-    color: "#EEE4CD",
-    description: "120 m² rectangulares y proporcionados para arquitectura compacta, patio privado y mantenimiento eficiente.",
-    image: "/media/container_2.jpeg",
-    note: "120 m² · Producto principal",
-    rateLabel: `$${LOT_PRICE_PER_M2_USD} USD / m²`,
-    ticketLabel: `Desde ${formatPenAmount(STANDARD_LOT_PRICE_PEN)}`,
-  },
-  {
-    id: "premium",
-    name: "Oasis / Lote amplio",
-    count: 54,
-    color: "#DC816E",
-    description: "240 m² en las filas exteriores más amplias, con mayor jardín privado y relación directa con el paisaje.",
-    image: "/media/plunge_pool_breakfast.png",
-    note: "240 m² · Mayor amplitud",
-    rateLabel: `$${LOT_PRICE_PER_M2_USD} USD / m²`,
-    ticketLabel: `Desde ${formatPenAmount(PREMIUM_LOT_PRICE_PEN)}`,
-  },
-];
-
-const officialMetrics = [
-  ["112.391,80 m²", "Área del lindero UTM"],
-  [String(PROJECT.residentialLots), "Lotes residenciales"],
-  ["4 m", "Paseos peatonales"],
-  [`${PROJECT.residentialLots}/${PROJECT.residentialLots}`, "Cabida domo Ø8"],
-];
-
-export const MasterplanSection: React.FC = () => {
-  const [activeType, setActiveType] = useState(lotTypes[0]);
+export const MasterplanSection: React.FC<{ lots?: Lot[] }> = () => {
+  const [masterplanMode, setMasterplanMode] = useState<MasterplanBasemap>("architectural");
 
   return (
-    <section id="masterplan" className="scroll-mt-24 bg-[#FAF8F5] py-20 text-[#1C1612] md:py-28">
-      <div className="mx-auto max-w-[1400px] px-5 sm:px-8 lg:px-12">
-        <div className="flex flex-col justify-between gap-10 lg:flex-row lg:items-end">
-          <SectionHeading
-            eyebrow="V · Expediente"
-            title="El predio, a la vista."
-            description="Cuatro aldeas alrededor del oasis. Los autos quedan en la órbita; el interior se recorre a pie."
-          />
-          <dl className="grid grid-cols-2 border-y border-[#E8E1D5] sm:grid-cols-4 lg:min-w-[620px]">
-            {officialMetrics.map(([value, label]) => (
-              <div key={label} className="border-r border-[#E8E1D5] px-4 py-5 last:border-r-0 sm:px-6">
-                <dt className="font-display text-xl font-semibold text-[#A84F36] sm:text-2xl">{value}</dt>
-                <dd className="mt-1 text-[9px] font-bold uppercase tracking-[0.15em] text-[#786F66]">{label}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
+    <section id="masterplan" className="scroll-mt-24 bg-[#FAF7F2] py-24 md:py-32 text-[#161311] border-b border-[#E8E1D5]">
+      <div className="mx-auto max-w-[1280px] px-5 sm:px-8 lg:px-12">
+        
+        {/* Encabezado */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 border-b border-[#E8E1D5] pb-8">
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#C5A059]/40 bg-white px-3.5 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[#A84F36]">
+              <Compass className="h-3.5 w-3.5 text-[#C5A059]" />
+              Masterplan · {PROJECT.areaLabel} · Oasis {oasisLabel}
+            </span>
+            <h2 className="mt-3 font-display text-3xl sm:text-5xl font-bold text-[#161311]">
+              El predio a tu alcance.
+            </h2>
+            <p className="mt-2 text-sm sm:text-base text-[#786F66] max-w-2xl">
+              Cuatro aldeas residenciales diseñadas alrededor del oasis central. Circulación vehicular perimetral y paseos peatonales interiores de arena compactada.
+            </p>
+          </div>
 
-        <div className="mt-12 grid gap-5 lg:grid-cols-[minmax(0,1.65fr)_minmax(310px,0.65fr)]">
           <Link
             to="/simulador"
             onClick={() => trackEvent("view_lot", { source: "home_masterplan", action: "open_map" })}
-            className="group relative block overflow-hidden rounded-[20px] border border-[#E8E1D5] bg-white focus:outline-none focus:ring-2 focus:ring-[#C5A059]"
-            aria-label="Abrir masterplan interactivo y seleccionar un lote"
+            className="inline-flex items-center gap-2 rounded-2xl bg-[#161311] px-6 py-3.5 font-sans text-xs font-bold uppercase tracking-wider text-white shadow transition hover:bg-[#C85B3E]"
           >
-            <div className="absolute left-4 top-4 z-10 rounded-sm border border-[#1d2a43]/15 bg-[#f7f0e1]/92 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.16em] text-[#1d2a43] shadow-sm backdrop-blur-sm sm:left-5 sm:top-5">
-              Plano comercial · V4 cuatro aldeas · Julio 2026
-            </div>
-            <img
-              src="/images/masterplan-v4-commercial.png"
-              alt={`Plano comercial V4 de Moon Paracas con ${PROJECT.residentialLots} lotes residenciales, oasis central y circulación perimetral`}
-              className="aspect-[3/2] h-full w-full bg-[#f7f0e1] object-contain p-2 transition-transform duration-700 group-hover:scale-[1.01] sm:p-4"
-              loading="lazy"
-            />
-            <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-[#1C1612]/88 px-5 py-4 text-[#FAF8F5] backdrop-blur-sm">
-              <span className="font-display text-xl">Ver el predio</span>
-              <ArrowUpRight className="h-5 w-5 text-[#f0b08c] transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-            </div>
+            <span>Ver Mapa en Tiempo Real</span>
+            <ArrowUpRight className="h-4 w-4" />
           </Link>
+        </div>
 
-          <div className="rounded-[20px] border border-[#E8E1D5] bg-white p-5 sm:p-6">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#786F66]">Filtrar por tipología</p>
-            <div className="mt-4 flex flex-wrap gap-2" role="tablist" aria-label="Tipologías de lote">
-              {lotTypes.map((type) => (
+        {/* Masterplan interactivo con selector de Modo: Perímetro Real UTM 18S vs Satélite */}
+        <div className="mt-12 overflow-hidden rounded-3xl border border-[#E8E1D5] bg-white shadow-sm">
+          <div className="flex flex-col gap-3 border-b border-[#E8E1D5] bg-[#FAF8F5] px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#A84F36]">
+                Georreferenciación Oficial · UTM Zona 18S · Lote Matriz
+              </p>
+              <p className="mt-0.5 text-xs text-[#786F66]">
+                Polígono irregular real (112,591.80 m² · 11.26 ha) con vértices geodésicos oficiales A, B, C y D.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="flex rounded-full border border-[#E8E1D5] bg-white p-1 shadow-sm">
                 <button
-                  key={type.id}
                   type="button"
-                  role="tab"
-                  aria-selected={activeType.id === type.id}
-                  onClick={() => {
-                    setActiveType(type);
-                    trackEvent("select_typology", { typology: type.id, source: "home_masterplan" });
-                  }}
-                  className={`flex h-10 w-10 items-center justify-center rounded-md border transition-all focus:outline-none focus:ring-2 focus:ring-[#C5A059] ${
-                    activeType.id === type.id
-                      ? "scale-105 border-[#1C1612] bg-[#F4EFE6]"
-                      : "border-[#E8E1D5] hover:border-[#C5A059]"
+                  onClick={() => setMasterplanMode("architectural")}
+                  className={`rounded-full px-3.5 py-1 text-xs font-bold transition cursor-pointer ${
+                    masterplanMode === "architectural"
+                      ? "bg-[#161311] text-white shadow"
+                      : "text-[#786F66] hover:text-[#161311]"
                   }`}
-                  title={type.name}
                 >
-                  <span className="h-4 w-4 rounded-sm" style={{ backgroundColor: type.color }} />
-                  <span className="sr-only">{type.name}</span>
+                  Plano 2D
                 </button>
-              ))}
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setMasterplanMode("satellite")}
+                  className={`rounded-full px-3.5 py-1 text-xs font-bold transition cursor-pointer ${
+                    masterplanMode === "satellite"
+                      ? "bg-[#A84F36] text-white shadow"
+                      : "text-[#786F66] hover:text-[#161311]"
+                  }`}
+                >
+                  Satélite UTM
+                </button>
+              </div>
 
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeType.id}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.22 }}
-                className="mt-7"
-                role="tabpanel"
+              <Link
+                to="/simulador"
+                onClick={() => trackEvent("view_lot", { source: "home_masterplan_map", action: "open_simulator" })}
+                className="hidden sm:inline-flex items-center gap-1.5 self-start rounded-full bg-[#161311] px-3.5 py-2 text-[10px] font-bold uppercase tracking-wider text-white hover:bg-[#C85B3E]"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#A84F36]">{activeType.note}</p>
-                    <h3 className="mt-2 font-display text-3xl font-semibold leading-none text-[#1C1612]">{activeType.name}</h3>
-                  </div>
-                  <span className="font-display text-5xl font-semibold text-[#E8E1D5]">{activeType.count}</span>
-                </div>
-                <p className="mt-5 text-sm leading-7 text-[#3D352E]">{activeType.description}</p>
-                <div className="mt-5 flex items-end justify-between gap-4 border-t border-[#E8E1D5] pt-5">
-                  <div>
-                    <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#786F66]">Precio · {COMMERCIAL_PRICE_PERIOD_LABEL}</p>
-                    <p className="mt-1 text-xs font-semibold text-[#3D352E]">{activeType.rateLabel}</p>
-                  </div>
-                  <strong className="font-display text-2xl font-semibold text-[#A84F36]">{activeType.ticketLabel}</strong>
-                </div>
-                <div className="mt-6 flex items-center gap-3 border-t border-[#E8E1D5] pt-5 text-xs text-[#786F66]">
-                  <MapPinned className="h-4 w-4 text-[#f0b08c]" />
-                  {activeType.count} unidades identificadas
-                </div>
-              </motion.div>
-            </AnimatePresence>
-
-            <div className="mt-7 grid grid-cols-2 gap-3 border-t border-[#E8E1D5] pt-5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#786F66]">
-              <span className="flex items-center gap-2"><Leaf className="h-4 w-4 text-[#4E6646]" /> Eje Oasis</span>
-              <span className="flex items-center gap-2"><Car className="h-4 w-4 text-[#d9b878]" /> 12 estaciones periféricas</span>
+                Simulador
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
+          </div>
+
+          <div className="w-full">
+            <MapCanvas basemap={masterplanMode} onBasemapChange={setMasterplanMode} />
           </div>
         </div>
 
-        <p className="mt-6 text-center text-[10px] uppercase tracking-[0.15em] text-[#786F66]">
-          Sistema V4: {PROJECT.residentialLots} lotes residenciales · {PROJECT.parkingLots} cocheras · paseos de 4 m · pausas verdes entre grupos
-        </p>
+        {/* 3 Tipologías Claras y Ordenadas */}
+        <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-6">
+          
+          {/* Card 1: 120 m² */}
+          <div className="rounded-3xl border border-[#C5A059]/40 bg-white p-8 flex flex-col justify-between shadow-sm hover:border-[#C5A059] transition-all">
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#C5A059]">Lote Individual</span>
+                <span className="rounded-full bg-[#4E6646]/10 px-2.5 py-1 text-[9px] font-bold text-[#4E6646]">${LOT_PRICE_PER_M2_USD} USD / m²</span>
+              </div>
+              <h3 className="font-display text-2xl font-bold text-[#161311]">{STANDARD_LOT_AREA_M2} m² Residencial</h3>
+              <p className="text-xs text-[#786F66] mt-1.5 leading-relaxed">
+                Diseñado para domo geodésico Ø8m (50 m²) con kitchenette, baño completo y deck exterior privado.
+              </p>
+
+              <div className="mt-6 pt-5 border-t border-[#E8E1D5]">
+                <span className="text-[9px] uppercase tracking-wider text-[#786F66] font-bold">Precio de Lanzamiento</span>
+                <p className="text-3xl font-bold font-display text-[#161311] mt-0.5">
+                  ${STANDARD_LOT_PRICE_USD.toLocaleString()} <span className="text-xs font-sans text-[#786F66]">USD</span>
+                </p>
+                <span className="text-xs font-semibold text-[#A84F36]">~S/ {STANDARD_LOT_PRICE_PEN.toLocaleString()} PEN</span>
+              </div>
+
+              <ul className="mt-6 space-y-2.5 text-xs text-[#38312B]">
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-[#4E6646] shrink-0" />
+                  <span>Acceso directo a Oasis {oasisLabel}</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-[#4E6646] shrink-0" />
+                  <span>Punto de agua y saneamiento ecológico</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-[#4E6646] shrink-0" />
+                  <span>Financiamiento directo hasta en 36 cuotas</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="mt-8 pt-5 border-t border-[#E8E1D5]">
+              <Link
+                to="/simulador"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#C85B3E] py-3.5 text-xs font-bold text-white hover:bg-[#A84F36] transition shadow-sm"
+              >
+                <span>Ver Lotes de 120 m²</span>
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Card 2: 240 m² */}
+          <div className="rounded-3xl border border-[#C85B3E]/30 bg-gradient-to-b from-white to-[#FAF7F2] p-8 flex flex-col justify-between shadow-sm hover:border-[#C85B3E] transition-all">
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#A84F36]">Lote Doble (2 juntos)</span>
+                <span className="rounded-full bg-[#C85B3E]/10 px-2.5 py-1 text-[9px] font-bold text-[#C85B3E]">Mayor Amplitud</span>
+              </div>
+              <h3 className="font-display text-2xl font-bold text-[#161311]">{DOUBLE_LOT_AREA_M2} m² Ampliado</h3>
+              <p className="text-xs text-[#786F66] mt-1.5 leading-relaxed">
+                Dos lotes contiguos integrados. Ideal para domo principal + plunge pool privada, pérgola y amplio jardín seco.
+              </p>
+
+              <div className="mt-6 pt-5 border-t border-[#E8E1D5]">
+                <span className="text-[9px] uppercase tracking-wider text-[#786F66] font-bold">Precio de Lanzamiento</span>
+                <p className="text-3xl font-bold font-display text-[#C85B3E] mt-0.5">
+                  ${DOUBLE_LOT_PRICE_USD.toLocaleString()} <span className="text-xs font-sans text-[#786F66]">USD</span>
+                </p>
+                <span className="text-xs font-semibold text-[#161311]">~S/ {DOUBLE_LOT_PRICE_PEN.toLocaleString()} PEN</span>
+              </div>
+
+              <ul className="mt-6 space-y-2.5 text-xs text-[#38312B]">
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-[#4E6646] shrink-0" />
+                  <span>240 m² de terreno continuo</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-[#4E6646] shrink-0" />
+                  <span>Mayor privacidad y área de terraza</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-[#4E6646] shrink-0" />
+                  <span>Membresía familiar completa a Moon Club</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="mt-8 pt-5 border-t border-[#E8E1D5]">
+              <Link
+                to="/simulador"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#161311] py-3.5 text-xs font-bold text-white hover:bg-[#C85B3E] transition shadow-sm"
+              >
+                <span>Ver Lotes de 240 m²</span>
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Card 3: Macrolotes > 2,000 m² */}
+          <div className="rounded-3xl border border-[#E8E1D5] bg-white p-8 flex flex-col justify-between shadow-sm hover:border-[#161311] transition-all">
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#786F66]">Sector Campestre</span>
+                <span className="rounded-full bg-[#161311]/10 px-2.5 py-1 text-[9px] font-bold text-[#161311]">${MACRO_LOT_PRICE_PER_M2_USD} USD / m²</span>
+              </div>
+              <h3 className="font-display text-2xl font-bold text-[#161311]">&gt; {MACRO_LOT_AREA_M2.toLocaleString()} m² Rústico</h3>
+              <p className="text-xs text-[#786F66] mt-1.5 leading-relaxed">
+                Grandes parcelas rústicas fuera del condominio para huertos, viñedos o casas de campo independientes.
+              </p>
+
+              <div className="mt-6 pt-5 border-t border-[#E8E1D5]">
+                <span className="text-[9px] uppercase tracking-wider text-[#786F66] font-bold">Desde</span>
+                <p className="text-3xl font-bold font-display text-[#161311] mt-0.5">
+                  ${MACRO_LOT_PRICE_USD.toLocaleString()} <span className="text-xs font-sans text-[#786F66]">USD</span>
+                </p>
+                <span className="text-xs font-semibold text-[#786F66]">~S/ {MACRO_LOT_PRICE_PEN.toLocaleString()} PEN (2,000 m²)</span>
+              </div>
+
+              <ul className="mt-6 space-y-2.5 text-xs text-[#38312B]">
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-[#4E6646] shrink-0" />
+                  <span>Grandes extensiones extramuros</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-[#4E6646] shrink-0" />
+                  <span>Tarifa preferencial de $45 USD / m²</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-[#4E6646] shrink-0" />
+                  <span>Libertad de diseño rústico</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="mt-8 pt-5 border-t border-[#E8E1D5]">
+              <Link
+                to="/simulador"
+                className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-[#E8E1D5] bg-[#FAF7F2] py-3.5 text-xs font-bold text-[#161311] hover:bg-white transition"
+              >
+                <span>Consultar Macrolotes</span>
+                <ArrowUpRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+
+        </div>
+
       </div>
     </section>
   );
 };
 
-export function LotTypesSection() {
-  return (
-  <section id="tipologias" data-testid="lot-types-section" className="scroll-mt-24 bg-[#F4EFE6] py-20 md:py-28">
-    <div className="mx-auto max-w-[1400px] px-5 sm:px-8 lg:px-12">
-      <SectionHeading
-        eyebrow="Dos escalas"
-        title="Cuánto espacio para habitar el paisaje."
-        description="Los lotes de 120 y 240 m² conservan proporciones edificables, frente comprobado y acceso peatonal desde su cochera perimetral."
-      />
-
-      <div className="mt-12 grid gap-4 md:grid-cols-2">
-        {lotTypes.map((type, index) => (
-          <Link
-            key={type.id}
-            to="/simulador"
-            onClick={() => trackEvent("select_typology", { typology: type.id, source: "home_typology_card" })}
-            className="group relative min-h-[460px] overflow-hidden rounded-lg shadow-[0_20px_55px_rgba(28,22,18,0.1)] outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059]"
-            aria-label={`Ver lotes ${type.name}: ${type.ticketLabel}`}
-          >
-            <img
-              src={type.image}
-              alt={`Inspiración visual para ${type.name}`}
-              className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.035]"
-              loading="lazy"
-              decoding="async"
-            />
-            <div className="absolute inset-0 bg-[linear-gradient(0deg,rgba(10,20,20,0.97)_0%,rgba(10,20,20,0.12)_72%)]" />
-            <div className="absolute inset-x-0 top-0 flex items-center justify-between p-5">
-              <span className="rounded-full border border-white/18 bg-[#0d1c1d]/55 px-3 py-2 text-[9px] font-bold uppercase tracking-[0.14em] text-white backdrop-blur-md">0{index + 1} · {type.note}</span>
-              <span className="font-display text-3xl font-semibold text-white/65">{type.count}</span>
-            </div>
-            <div className="absolute inset-x-0 bottom-0 p-6 sm:p-7">
-              <div className="mb-4 flex items-center gap-3">
-                <span className="h-2.5 w-2.5 rounded-full border border-white/60" style={{ backgroundColor: type.color }} />
-                <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-white/55">Tipología de lote</span>
-              </div>
-              <h3 className="font-display text-4xl font-semibold leading-none text-white">{type.name}</h3>
-              <p className="mt-3 text-xs leading-6 text-white/75">{type.description}</p>
-              <div className="mt-5 flex items-end justify-between gap-4 border-t border-white/18 pt-5">
-                <p className="text-sm font-semibold text-[#ffd7bd]">{type.ticketLabel}<span className="mt-1 block text-[9px] uppercase tracking-[0.12em] text-white/48">{type.rateLabel}</span></p>
-                <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white text-[#1C1612] transition-transform group-hover:-translate-y-1 group-hover:translate-x-1"><ArrowUpRight className="h-4 w-4" aria-hidden="true" /></span>
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-    </div>
-  </section>
-  );
-}

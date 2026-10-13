@@ -2,7 +2,32 @@ import { useState } from "react";
 import { ArrowRight, Check, GitCompareArrows, MapPin, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { trackEvent } from "../../lib/analytics";
-import { lotTypes } from "./MasterplanSection";
+import { LOT_PRICE_PER_M2_USD, STANDARD_LOT_PRICE_PEN, PREMIUM_LOT_PRICE_PEN, formatPenAmount } from "../../config/pricing";
+
+export const lotTypes = [
+  {
+    id: "tiny",
+    name: "Patio Lunar (120 m²)",
+    count: 228,
+    color: "#EEE4CD",
+    description: "120 m² rectangulares y proporcionados para arquitectura compacta, patio privado y mantenimiento eficiente.",
+    image: "/media/container_2.jpeg",
+    note: "120 m² · Producto principal",
+    rateLabel: `$${LOT_PRICE_PER_M2_USD} USD / m²`,
+    ticketLabel: `Desde ${formatPenAmount(STANDARD_LOT_PRICE_PEN)}`,
+  },
+  {
+    id: "premium",
+    name: "Oasis / Lote amplio (240 m²)",
+    count: 54,
+    color: "#DC816E",
+    description: "240 m² en las filas exteriores más amplias, con mayor jardín privado y relación directa con el paisaje.",
+    image: "/media/plunge_pool_breakfast.png",
+    note: "240 m² · Mayor amplitud",
+    rateLabel: `$${LOT_PRICE_PER_M2_USD} USD / m²`,
+    ticketLabel: `Desde ${formatPenAmount(PREMIUM_LOT_PRICE_PEN)}`,
+  },
+];
 
 type ComparisonDetail = {
   id: string;

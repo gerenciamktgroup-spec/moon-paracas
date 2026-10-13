@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "verify:site": "node scripts/verify-site.mjs",
-    "verify:masterplan": "tsx scripts/verify-courtyard-masterplan.ts",
+    "verify:masterplan": "tsx scripts/verifyMasterplan.ts",
+    "verify:geometry": "tsx scripts/verify-real-masterplan.ts",
     "verify:masterplan:v3": "tsx scripts/verify-organic-masterplan.ts",
     "verify:masterplan:v2.2": "tsx scripts/verify-constellation-masterplan.ts",
     "export:masterplan": "tsx scripts/export-courtyard-masterplan.ts",
@@ -36,7 +37,8 @@
     "react-router-dom": "^7.18.0",
     "recharts": "^3.8.1",
     "three": "^0.184.0",
-    "vite": "^6.2.3"
+    "vite": "^6.2.3",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
     "@firebase/eslint-plugin-security-rules": "^0.0.2",

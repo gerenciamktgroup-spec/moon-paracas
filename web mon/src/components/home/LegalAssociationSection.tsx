@@ -28,7 +28,7 @@ export const LegalAssociationSection: React.FC = () => {
     },
     {
       num: "05",
-      title: "Membresía Vitalicia a Moon Club (Oasis 5,000 m²)",
+      title: "Membresía Vitalicia a Moon Club (Oasis 20.662 m²)",
       desc: "Acceso garantizado a las áreas comunes, laguna central, senderos peatonales y áreas de esparcimiento del condominio.",
     },
   ];

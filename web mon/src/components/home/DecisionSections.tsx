@@ -254,7 +254,7 @@ const faqs = [
       "Sí. Moon Paracas está diseñado como un activo de doble propósito. Puedes disfrutar tu lote los fines de semana que elijas y alquilarlo los días restantes. Existe la opción de operar mediante conserjería y gestión centralizada para recepción de huéspedes, limpieza y mantenimiento sin que tengas que viajar.",
   },
   {
-    question: "¿Qué amenidades incluye el Oasis de 5,000 m²?",
+    question: "¿Qué amenidades incluye el Oasis de 20.662 m²?",
     answer:
       "Acceso vitalicio a la laguna zen navegable con decks de solarium, club house ecológico, circuito de caminatas y running, zonas de fogatas (fire pits) bajo las estrellas, bio-huerto y áreas de yoga y meditación.",
   },

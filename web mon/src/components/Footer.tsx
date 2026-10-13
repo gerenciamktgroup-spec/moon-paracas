@@ -27,7 +27,7 @@ export const Footer: React.FC<{ selectedLot?: Lot | null; onOpenDossier?: () => 
               MOON <span className="font-serif-italic font-normal text-[#C85B3E]">PARACAS</span>
             </h3>
             <p className="text-xs text-[#786F66] leading-relaxed max-w-md">
-              El primer Eco-Resort privado en la pampa interior de Paracas, Ica. Lotes desde 120 m² para casa domo a solo ${LOT_PRICE_PER_M2_USD} USD/m² (desde ${STANDARD_LOT_PRICE_USD.toLocaleString()} USD), lotes dobles de 240 m² y acceso vitalicio al Oasis central de 5,000 m².
+              El primer Eco-Resort privado en la pampa interior de Paracas, Ica. Lotes desde 120 m² para casa domo a solo ${LOT_PRICE_PER_M2_USD} USD/m² (desde ${STANDARD_LOT_PRICE_USD.toLocaleString()} USD), lotes dobles de 240 m² y acceso vitalicio al Oasis central de {Math.round(PROJECT.oasisAreaM2).toLocaleString("es-PE")} m².
             </p>
             <div className="flex flex-wrap items-center gap-3 pt-2">
               <div className="inline-flex items-center gap-1.5 rounded-full bg-[#4E6646]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#4E6646]">

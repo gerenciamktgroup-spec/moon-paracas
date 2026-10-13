@@ -396,7 +396,7 @@ export const Experience: React.FC = () => {
           </div>
           <div className="space-y-2.5 md:pl-6">
             <h5 className="font-bold text-[#1C1612] uppercase tracking-wider text-xs flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#4E6646]" /> Oasis Central de 5,000 m²
+              <span className="w-2 h-2 rounded-full bg-[#4E6646]" /> Oasis Central de 20.662 m²
             </h5>
             <p className="text-[#786F66]">
               Laguna zen con paisajismo xerófilo de bajo consumo hídrico, circuito de caminatas y club house para toda la comunidad.

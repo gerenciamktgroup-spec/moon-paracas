@@ -31,7 +31,7 @@ const offers = {
     includes: [
       "120 m² útiles para Domo Ø8m",
       `Precio Lanzamiento: $${STANDARD_LOT_PRICE_USD.toLocaleString()} USD (~S/ ${STANDARD_LOT_PRICE_PEN.toLocaleString()} PEN)`,
-      "Acceso directo a Oasis 5,000 m² y Moon Club",
+      "Acceso directo a Oasis 20.662 m² y Moon Club",
       "Punto de conexión a cisterna centralizada",
     ],
     life: "Tu refugio privado.",

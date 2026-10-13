@@ -312,17 +312,10 @@ export const AccessRoute: React.FC = () => {
             </GoogleMap>
           </APIProvider>
         ) : (
-          <div data-testid="access-route-fallback" className="relative h-full min-h-[350px] overflow-hidden bg-[#e6e0d3]">
-            <img
-              src="/images/masterplan-v4-commercial.png"
-              alt="Masterplan V4 de cuatro aldeas de Moon Paracas"
-              className="h-full w-full object-contain p-4"
-              decoding="async"
-            />
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#102022] via-[#102022]/88 to-transparent px-5 pb-5 pt-20 text-white">
-              <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#f0b08c]">Referencia local disponible</p>
-              <p className="mt-2 max-w-md text-xs leading-5 text-white/75">El plano permanece disponible sin consumir una API externa. Usa “Cómo llegar” para abrir la ruta directamente en Google Maps.</p>
-            </div>
+          <div data-testid="access-route-fallback" className="relative flex h-full min-h-[350px] flex-col items-start justify-end overflow-hidden bg-[#102022] px-6 pb-6 pt-16">
+            <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#f0b08c]">Coordenadas reales · Paracas, Ica</p>
+            <p className="mt-2 max-w-md font-display text-2xl font-bold text-white">El predio se abre en Google Maps, no en un render.</p>
+            <p className="mt-2 max-w-md text-xs leading-5 text-white/75">Sin imagen generada. Usa “Cómo llegar” para la ruta satelital al condominio.</p>
           </div>
         )}
       </div>
